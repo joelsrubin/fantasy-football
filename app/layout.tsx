@@ -16,6 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Fantasy Football League Stats",
   description: "View Yahoo Fantasy Football league stats, standings, and matchups",
+  
 };
 
 export default function RootLayout({
@@ -25,6 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <link rel="icon" href="https://fav.farm/🏈" />
       <body
         className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} min-h-screen bg-zinc-950 font-sans antialiased`}
       >
