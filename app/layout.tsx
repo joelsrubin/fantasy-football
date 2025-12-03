@@ -36,7 +36,7 @@ export default function RootLayout({
           </div>
 
           {/* Header */}
-          <header className="relative border-b border-zinc-800/50 bg-zinc-900/50 backdrop-blur-xl">
+          <header className="sticky top-0 z-50 border-b border-zinc-800/50 bg-zinc-900/80 backdrop-blur-xl">
             <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
               <a href="/" className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-fuchsia-500">
