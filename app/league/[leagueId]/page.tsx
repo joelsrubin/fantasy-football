@@ -14,7 +14,7 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
 
   const { data: league, isLoading: leagueLoading, error: leagueError } = useLeague(leagueId);
   const { data: standings, isLoading: standingsLoading } = useStandings(leagueId);
-  const { data: matchups } = useScoreboard(leagueId, selectedWeek ?? undefined);
+  const { data: matchups, isFetching: scoreboardFetching } = useScoreboard(leagueId, selectedWeek ?? undefined);
 
   // Set initial week when league loads
   if (league && selectedWeek === null) {
@@ -169,6 +169,7 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
           setSelectedWeek={setSelectedWeek}
           league={league ?? null}
           leagueId={leagueId}
+          isLoading={scoreboardFetching}
         />
       )}
     </div>
@@ -311,12 +312,14 @@ function Scoreboard({
   setSelectedWeek,
   league,
   leagueId,
+  isLoading,
 }: {
   matchups: YahooMatchup[];
   selectedWeek: number | null;
   setSelectedWeek: (week: number) => void;
   league: YahooLeague | null;
   leagueId: string;
+  isLoading: boolean;
 }) {
   if (!league || !selectedWeek) return null;
 
@@ -373,19 +376,26 @@ function Scoreboard({
       </div>
 
       {/* Matchups Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {matchups.map((matchup) => (
-          <MatchupCard
-            key={`${matchup.week}-${matchup.teams[0]?.team.team_key}-${matchup.teams[1]?.team.team_key}`}
-            matchup={matchup}
-            leagueId={leagueId}
-          />
-        ))}
-      </div>
-
-      {matchups.length === 0 && (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+            <span className="text-sm text-zinc-400">Loading matchups...</span>
+          </div>
+        </div>
+      ) : matchups.length === 0 ? (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 text-center text-zinc-400">
           No matchups available for this week
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {matchups.map((matchup) => (
+            <MatchupCard
+              key={`${matchup.week}-${matchup.teams[0]?.team.team_key}-${matchup.teams[1]?.team.team_key}`}
+              matchup={matchup}
+              leagueId={leagueId}
+            />
+          ))}
         </div>
       )}
     </div>
