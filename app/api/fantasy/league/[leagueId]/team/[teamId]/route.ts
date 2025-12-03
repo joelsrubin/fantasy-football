@@ -12,7 +12,9 @@ export async function GET(
     const accessToken = await getYahooAccessToken();
     const api = createYahooFantasyAPI(accessToken);
 
-    const leagueKey = leagueId.includes(".l.") ? decodeURIComponent(leagueId) : `461.l.${leagueId}`;
+    // Decode the leagueId in case it's URL encoded
+    const decodedLeagueId = decodeURIComponent(leagueId);
+    const leagueKey = decodedLeagueId.includes(".l.") ? decodedLeagueId : `461.l.${decodedLeagueId}`;
 
     const teamKey = `${leagueKey}.t.${teamId}`;
 

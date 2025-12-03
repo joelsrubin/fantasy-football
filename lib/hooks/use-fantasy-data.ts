@@ -128,8 +128,9 @@ export function useTeamRoster(leagueKey: string, teamId: string, week?: number) 
   return useQuery({
     queryKey: ["roster", leagueKey, teamId, week],
     queryFn: () => fetchTeamRoster(leagueKey, teamId, week),
-    enabled: !!leagueKey && !!teamId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    // Require week to be set - important for prior year leagues
+    enabled: !!leagueKey && !!teamId && week !== undefined,
+    staleTime: 60 * 1000, // 1 minute
   });
 }
 

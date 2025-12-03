@@ -141,7 +141,7 @@ class YahooFantasyAPI {
     this.accessToken = accessToken;
   }
 
-  private async request<T>(endpoint: string, revalidate?: number): Promise<T> {
+  private async request<T>(endpoint: string, _revalidate?: number): Promise<T> {
     const url = `${YAHOO_FANTASY_API_BASE}${endpoint}`;
 
     const response = await fetch(url, {
@@ -149,7 +149,8 @@ class YahooFantasyAPI {
         Authorization: `Bearer ${this.accessToken}`,
         Accept: "application/json",
       },
-      next: revalidate ? { revalidate, tags: ["yahoo-api"] } : undefined,
+      // Disable caching to ensure fresh data
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -489,19 +490,24 @@ class YahooFantasyAPI {
       }
     }
 
-    // player_points is at data[3] (after is_editable at data[2])
+    // player_points could be at data[3] or elsewhere - search for it
     let playerPoints: YahooRosterPlayer["player_points"];
-    if (data[3] && typeof data[3] === "object") {
-      const statsData = data[3] as Record<string, unknown>;
-      if (statsData.player_points) {
-        const ppData = statsData.player_points as Record<string, unknown>;
-        // The "0" key contains coverage info
-        const coverageInfo = ppData["0"] as Record<string, unknown> | undefined;
-        playerPoints = {
-          total: parseFloat(ppData.total as string) || 0,
-          coverage_type: (coverageInfo?.coverage_type as string) || "week",
-          week: coverageInfo?.week as number | undefined,
-        };
+    
+    // Try to find player_points in the data array
+    for (let i = 1; i < data.length; i++) {
+      const item = data[i];
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        const obj = item as Record<string, unknown>;
+        if (obj.player_points) {
+          const ppData = obj.player_points as Record<string, unknown>;
+          const coverageInfo = ppData["0"] as Record<string, unknown> | undefined;
+          playerPoints = {
+            total: parseFloat(ppData.total as string) || 0,
+            coverage_type: (coverageInfo?.coverage_type as string) || "week",
+            week: coverageInfo?.week as number | undefined,
+          };
+          break;
+        }
       }
     }
 

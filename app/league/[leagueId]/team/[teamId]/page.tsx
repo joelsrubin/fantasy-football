@@ -26,19 +26,22 @@ export default function TeamPage({
   const { leagueId, teamId } = use(params);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
-  const { data: league } = useLeague(leagueId);
-  const {
-    data: roster,
-    isLoading,
-    error,
-  } = useTeamRoster(leagueId, teamId, selectedWeek ?? undefined);
-
+  const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
+  
   // Set initial week when league loads
   useEffect(() => {
     if (league && selectedWeek === null) {
       setSelectedWeek(league.current_week);
     }
   }, [league, selectedWeek]);
+
+  // Only fetch roster once we have a week (important for prior year leagues)
+  const {
+    data: roster,
+    isLoading: rosterLoading,
+    error,
+  } = useTeamRoster(leagueId, teamId, selectedWeek ?? undefined);
+  const isLoading = leagueLoading || rosterLoading || selectedWeek === null;
 
   if (error) {
     return (
