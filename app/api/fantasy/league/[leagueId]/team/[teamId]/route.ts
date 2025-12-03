@@ -20,6 +20,13 @@ export async function GET(
     const weekParam = searchParams.get("week");
     const week = weekParam ? parseInt(weekParam, 10) : undefined;
 
+    // Debug: get raw response
+    const debug = searchParams.get("debug") === "true";
+    if (debug) {
+      const rawData = await api.getTeamRosterRaw(teamKey, week);
+      return NextResponse.json({ raw: rawData });
+    }
+
     const roster = await api.getTeamRoster(teamKey, week);
 
     return NextResponse.json({ roster });

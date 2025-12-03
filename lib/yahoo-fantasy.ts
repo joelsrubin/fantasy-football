@@ -206,6 +206,14 @@ class YahooFantasyAPI {
     return this.parseRoster(data);
   }
 
+  async getTeamRosterRaw(teamKey: string, week?: number): Promise<Record<string, unknown>> {
+    const weekParam = week ? `;week=${week}` : "";
+    return this.request<Record<string, unknown>>(
+      `/team/${teamKey}/roster${weekParam}/players/stats?format=json`,
+      REVALIDATE.ROSTER,
+    );
+  }
+
   /**
    * Get scoreboard for a league for a specific week
    */
@@ -452,13 +460,48 @@ class YahooFantasyAPI {
 
   private mapRosterPlayer(data: unknown[]): YahooRosterPlayer {
     const playerInfo = data[0] as unknown[];
-    const playerStats = data[1] as Record<string, unknown>;
 
     // Flatten player info array
     const flatPlayer: Record<string, unknown> = {};
     for (const item of playerInfo) {
       if (typeof item === "object" && item !== null) {
         Object.assign(flatPlayer, item);
+      }
+    }
+
+    // selected_position is at data[1] as an array, need to flatten it
+    let selectedPosition: YahooRosterPlayer["selected_position"];
+    if (data[1] && typeof data[1] === "object") {
+      const posData = data[1] as Record<string, unknown>;
+      if (posData.selected_position) {
+        const posArray = posData.selected_position as unknown[];
+        const flatPos: Record<string, unknown> = {};
+        for (const item of posArray) {
+          if (typeof item === "object" && item !== null) {
+            Object.assign(flatPos, item);
+          }
+        }
+        selectedPosition = {
+          position: flatPos.position as string,
+          coverage_type: flatPos.coverage_type as string,
+          week: flatPos.week as number | undefined,
+        };
+      }
+    }
+
+    // player_points is at data[3] (after is_editable at data[2])
+    let playerPoints: YahooRosterPlayer["player_points"];
+    if (data[3] && typeof data[3] === "object") {
+      const statsData = data[3] as Record<string, unknown>;
+      if (statsData.player_points) {
+        const ppData = statsData.player_points as Record<string, unknown>;
+        // The "0" key contains coverage info
+        const coverageInfo = ppData["0"] as Record<string, unknown> | undefined;
+        playerPoints = {
+          total: parseFloat(ppData.total as string) || 0,
+          coverage_type: (coverageInfo?.coverage_type as string) || "week",
+          week: coverageInfo?.week as number | undefined,
+        };
       }
     }
 
@@ -484,8 +527,8 @@ class YahooFantasyAPI {
       headshot: flatPlayer.headshot as YahooPlayer["headshot"],
       uniform_number: flatPlayer.uniform_number as string | undefined,
       bye_weeks: flatPlayer.bye_weeks as YahooPlayer["bye_weeks"],
-      selected_position: flatPlayer.selected_position as YahooRosterPlayer["selected_position"],
-      player_points: playerStats?.player_points as YahooRosterPlayer["player_points"],
+      selected_position: selectedPosition,
+      player_points: playerPoints,
     };
   }
 
