@@ -1,7 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { YahooLeague, YahooTeamStandings, YahooMatchup, YahooRosterPlayer } from "@/lib/yahoo-fantasy";
+import type {
+  YahooLeague,
+  YahooMatchup,
+  YahooRosterPlayer,
+  YahooTeamStandings,
+} from "@/lib/yahoo-fantasy";
 
 // Types for API responses
 interface LeagueInfo {
@@ -54,7 +59,7 @@ async function fetchStandings(leagueKey: string): Promise<YahooTeamStandings[]> 
 }
 
 async function fetchScoreboard(leagueKey: string, week?: number): Promise<YahooMatchup[]> {
-  const url = week 
+  const url = week
     ? `/api/fantasy/league/${encodeURIComponent(leagueKey)}/scoreboard?week=${week}`
     : `/api/fantasy/league/${encodeURIComponent(leagueKey)}/scoreboard`;
   const response = await fetch(url);
@@ -66,7 +71,11 @@ async function fetchScoreboard(leagueKey: string, week?: number): Promise<YahooM
   return data.matchups;
 }
 
-async function fetchTeamRoster(leagueKey: string, teamId: string, week?: number): Promise<YahooRosterPlayer[]> {
+async function fetchTeamRoster(
+  leagueKey: string,
+  teamId: string,
+  week?: number,
+): Promise<YahooRosterPlayer[]> {
   const url = week
     ? `/api/fantasy/league/${encodeURIComponent(leagueKey)}/team/${teamId}?week=${week}`
     : `/api/fantasy/league/${encodeURIComponent(leagueKey)}/team/${teamId}`;
@@ -126,4 +135,3 @@ export function useTeamRoster(leagueKey: string, teamId: string, week?: number) 
 
 // Re-export types
 export type { LeagueInfo, SeasonData };
-

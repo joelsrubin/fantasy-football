@@ -1,16 +1,16 @@
 /**
  * Yahoo OAuth Setup Script
  * Run with: pnpm run setup-yahoo
- * 
+ *
  * This opens a browser for you to authorize the app,
  * then you paste the code back here.
  */
 
-import { config } from "dotenv";
-import { createInterface } from "node:readline";
+import { exec } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { exec } from "node:child_process";
+import { createInterface } from "node:readline";
+import { config } from "dotenv";
 
 // Load environment variables from .env.local
 config({ path: ".env.local" });
@@ -35,11 +35,8 @@ console.log("\n🏈 Yahoo Fantasy Football OAuth Setup\n");
 console.log("Opening browser for authorization...\n");
 
 // Open the auth URL in the browser
-const openCommand = process.platform === "darwin" 
-  ? "open" 
-  : process.platform === "win32" 
-    ? "start" 
-    : "xdg-open";
+const openCommand =
+  process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
 
 exec(`${openCommand} "${authUrl.toString()}"`);
 
@@ -56,9 +53,9 @@ const rl = createInterface({
 
 rl.question("Paste the code here: ", async (code) => {
   rl.close();
-  
+
   const trimmedCode = code.trim();
-  
+
   if (!trimmedCode) {
     console.error("\n❌ No code provided");
     process.exit(1);
@@ -68,7 +65,7 @@ rl.question("Paste the code here: ", async (code) => {
 
   try {
     const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
-    
+
     const tokenResponse = await fetch("https://api.login.yahoo.com/oauth2/get_token", {
       method: "POST",
       headers: {
@@ -88,17 +85,14 @@ rl.question("Paste the code here: ", async (code) => {
     }
 
     const data = await tokenResponse.json();
-    
+
     const tokens = {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       expiresAt: Date.now() + data.expires_in * 1000,
     };
-    
-    await writeFile(
-      join(process.cwd(), ".yahoo-tokens.json"),
-      JSON.stringify(tokens, null, 2)
-    );
+
+    await writeFile(join(process.cwd(), ".yahoo-tokens.json"), JSON.stringify(tokens, null, 2));
 
     console.log("\n✅ Authorization successful!");
     console.log("📁 Tokens saved to .yahoo-tokens.json");

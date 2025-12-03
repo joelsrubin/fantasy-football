@@ -3,10 +3,11 @@
  * Run with: pnpm run debug-yahoo
  */
 
-import { config } from "dotenv";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { config } from "dotenv";
 import type { TokenData } from "@/lib/yahoo-auth";
+
 config({ path: ".env.local" });
 
 async function main() {
@@ -36,14 +37,14 @@ async function main() {
           Authorization: `Bearer ${tokens?.accessToken || ""}`,
           Accept: "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("❌ API Error:", response.status);
       console.error(errorText);
-      
+
       if (response.status === 401) {
         console.log("\n💡 Token may be expired. Try running 'pnpm run setup-yahoo' again.\n");
       }
@@ -51,11 +52,11 @@ async function main() {
     }
 
     const data = await response.json();
-    
+
     // Parse the response to find leagues
     const users = data.fantasy_content?.users;
     const user = users?.["0"]?.user;
-    
+
     if (!user) {
       console.log("No user data found in response");
       console.log(JSON.stringify(data, null, 2));
@@ -63,7 +64,7 @@ async function main() {
     }
 
     console.log("👤 Logged in as Yahoo user\n");
-    
+
     const games = user[1]?.games;
     const gamesCount = games?.count || 0;
 
@@ -98,9 +99,10 @@ async function main() {
       }
     }
 
-    console.log("\n" + "─".repeat(60));
-    console.log("\n💡 Use the League Key (e.g., '449.l.123456') or just the League ID in the app.\n");
-
+    console.log(`\n${"─".repeat(60)}`);
+    console.log(
+      "\n💡 Use the League Key (e.g., '449.l.123456') or just the League ID in the app.\n",
+    );
   } catch (err) {
     console.error("❌ Error:", err instanceof Error ? err.message : err);
     process.exit(1);
@@ -108,4 +110,3 @@ async function main() {
 }
 
 main();
-

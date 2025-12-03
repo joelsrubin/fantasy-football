@@ -35,7 +35,7 @@ async function refreshAccessToken(currentRefreshToken: string): Promise<TokenDat
 
   if (!clientId || !clientSecret) {
     throw new Error(
-      "Missing Yahoo API credentials. Please set YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET environment variables."
+      "Missing Yahoo API credentials. Please set YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET environment variables.",
     );
   }
 
@@ -94,9 +94,7 @@ export async function getYahooAccessToken(): Promise<string> {
     return cachedToken.accessToken;
   }
 
-  throw new Error(
-    "No Yahoo tokens found. Run 'pnpm run setup-yahoo' to authenticate with Yahoo."
-  );
+  throw new Error("No Yahoo tokens found. Run 'pnpm run setup-yahoo' to authenticate with Yahoo.");
 }
 
 /**

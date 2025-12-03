@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, use, useEffect } from "react";
 import Link from "next/link";
+import { use, useEffect, useState } from "react";
 import { useLeague, useTeamRoster } from "@/lib/hooks/use-fantasy-data";
 import type { YahooRosterPlayer } from "@/lib/yahoo-fantasy";
 
@@ -27,11 +27,11 @@ export default function TeamPage({
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
   const { data: league } = useLeague(leagueId);
-  const { data: roster, isLoading, error } = useTeamRoster(
-    leagueId,
-    teamId,
-    selectedWeek ?? undefined
-  );
+  const {
+    data: roster,
+    isLoading,
+    error,
+  } = useTeamRoster(leagueId, teamId, selectedWeek ?? undefined);
 
   // Set initial week when league loads
   useEffect(() => {
@@ -45,8 +45,19 @@ export default function TeamPage({
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
-            <svg className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              className="h-8 w-8 text-red-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
           </div>
           <h2 className="mb-2 text-xl font-semibold text-white">Error Loading Team</h2>
@@ -55,8 +66,19 @@ export default function TeamPage({
             href={`/league/${leagueId}`}
             className="inline-flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
             </svg>
             Back to League
           </Link>
@@ -67,15 +89,12 @@ export default function TeamPage({
 
   // Group players by position type
   const starters = (roster ?? []).filter(
-    (p) => p.selected_position?.position && !["BN", "IR"].includes(p.selected_position.position)
+    (p) => p.selected_position?.position && !["BN", "IR"].includes(p.selected_position.position),
   );
   const bench = (roster ?? []).filter((p) => p.selected_position?.position === "BN");
   const ir = (roster ?? []).filter((p) => p.selected_position?.position === "IR");
 
-  const totalPoints = starters.reduce(
-    (sum, p) => sum + (p.player_points?.total || 0),
-    0
-  );
+  const totalPoints = starters.reduce((sum, p) => sum + (p.player_points?.total || 0), 0);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
@@ -84,8 +103,19 @@ export default function TeamPage({
         href={`/league/${leagueId}`}
         className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
         </svg>
         Back to League
       </Link>
@@ -100,8 +130,19 @@ export default function TeamPage({
               disabled={selectedWeek === 1}
               className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <div className="text-center">
@@ -114,12 +155,25 @@ export default function TeamPage({
             </div>
             <button
               type="button"
-              onClick={() => setSelectedWeek(Math.min(parseInt(league.end_week), selectedWeek + 1))}
-              disabled={selectedWeek === parseInt(league.end_week)}
+              onClick={() =>
+                setSelectedWeek(Math.min(parseInt(league.end_week, 10), selectedWeek + 1))
+              }
+              disabled={selectedWeek === parseInt(league.end_week, 10)}
               className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>

@@ -3,9 +3,9 @@
  * Run with: pnpm run debug-standings
  */
 
-import { config } from "dotenv";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { config } from "dotenv";
 
 config({ path: ".env.local" });
 
@@ -23,7 +23,7 @@ async function main() {
         Authorization: `Bearer ${tokens.accessToken}`,
         Accept: "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
@@ -40,25 +40,25 @@ async function main() {
   // Try to extract team data to see structure
   const fantasy = data.fantasy_content;
   const league = fantasy?.league;
-  
+
   console.log("\n\n--- League structure ---");
   console.log("league array length:", league?.length);
-  
-  if (league && league[1]) {
+
+  if (league?.[1]) {
     console.log("\nleague[1] keys:", Object.keys(league[1]));
-    
+
     const standingsData = league[1]?.standings;
     console.log("\nstandings structure:", standingsData);
-    
+
     if (standingsData) {
       const teams = standingsData[0]?.teams;
       console.log("\nteams count:", teams?.count);
-      
+
       // Look at first team structure
       const firstTeam = teams?.["0"]?.team;
       console.log("\n--- First team structure ---");
       console.log("firstTeam array length:", firstTeam?.length);
-      
+
       if (firstTeam) {
         for (let i = 0; i < firstTeam.length; i++) {
           console.log(`\nfirstTeam[${i}]:`, JSON.stringify(firstTeam[i], null, 2));
@@ -69,4 +69,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

@@ -2,10 +2,10 @@ const YAHOO_FANTASY_API_BASE = "https://fantasysports.yahooapis.com/fantasy/v2";
 
 // Cache revalidation times (in seconds) for Next.js fetch
 const REVALIDATE = {
-  LEAGUE: 300,      // 5 minutes - league info rarely changes
-  STANDINGS: 120,   // 2 minutes - standings update after games
-  SCOREBOARD: 60,   // 1 minute - scores update during games
-  ROSTER: 120,      // 2 minutes - rosters can change with lineup moves
+  LEAGUE: 300, // 5 minutes - league info rarely changes
+  STANDINGS: 120, // 2 minutes - standings update after games
+  SCOREBOARD: 60, // 1 minute - scores update during games
+  ROSTER: 120, // 2 minutes - rosters can change with lineup moves
 };
 
 export interface YahooLeague {
@@ -143,7 +143,7 @@ class YahooFantasyAPI {
 
   private async request<T>(endpoint: string, revalidate?: number): Promise<T> {
     const url = `${YAHOO_FANTASY_API_BASE}${endpoint}`;
-    
+
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${this.accessToken}`,
@@ -166,7 +166,7 @@ class YahooFantasyAPI {
   async getLeague(leagueKey: string): Promise<YahooLeague | null> {
     const data = await this.request<Record<string, unknown>>(
       `/league/${leagueKey}?format=json`,
-      REVALIDATE.LEAGUE
+      REVALIDATE.LEAGUE,
     );
     const leagues = this.parseLeagueResponse(data);
     return leagues[0] || null;
@@ -178,7 +178,7 @@ class YahooFantasyAPI {
   async getLeagueStandings(leagueKey: string): Promise<YahooTeamStandings[]> {
     const data = await this.request<Record<string, unknown>>(
       `/league/${leagueKey}/standings?format=json`,
-      REVALIDATE.STANDINGS
+      REVALIDATE.STANDINGS,
     );
     return this.parseStandings(data);
   }
@@ -189,7 +189,7 @@ class YahooFantasyAPI {
   async getLeagueTeams(leagueKey: string): Promise<YahooTeam[]> {
     const data = await this.request<Record<string, unknown>>(
       `/league/${leagueKey}/teams?format=json`,
-      REVALIDATE.LEAGUE
+      REVALIDATE.LEAGUE,
     );
     return this.parseTeams(data);
   }
@@ -197,14 +197,11 @@ class YahooFantasyAPI {
   /**
    * Get team roster with stats for a specific week
    */
-  async getTeamRoster(
-    teamKey: string,
-    week?: number
-  ): Promise<YahooRosterPlayer[]> {
+  async getTeamRoster(teamKey: string, week?: number): Promise<YahooRosterPlayer[]> {
     const weekParam = week ? `;week=${week}` : "";
     const data = await this.request<Record<string, unknown>>(
       `/team/${teamKey}/roster${weekParam}/players/stats?format=json`,
-      REVALIDATE.ROSTER
+      REVALIDATE.ROSTER,
     );
     return this.parseRoster(data);
   }
@@ -212,13 +209,10 @@ class YahooFantasyAPI {
   /**
    * Get scoreboard for a league for a specific week
    */
-  async getLeagueScoreboard(
-    leagueKey: string,
-    week: number
-  ): Promise<YahooMatchup[]> {
+  async getLeagueScoreboard(leagueKey: string, week: number): Promise<YahooMatchup[]> {
     const data = await this.request<Record<string, unknown>>(
       `/league/${leagueKey}/scoreboard;week=${week}?format=json`,
-      REVALIDATE.SCOREBOARD
+      REVALIDATE.SCOREBOARD,
     );
     return this.parseScoreboard(data);
   }
@@ -229,7 +223,7 @@ class YahooFantasyAPI {
   async getLeagueMatchups(leagueKey: string): Promise<YahooMatchup[]> {
     const data = await this.request<Record<string, unknown>>(
       `/league/${leagueKey}/scoreboard?format=json`,
-      REVALIDATE.SCOREBOARD
+      REVALIDATE.SCOREBOARD,
     );
     return this.parseScoreboard(data);
   }
@@ -275,9 +269,10 @@ class YahooFantasyAPI {
       if (league?.[1]) {
         const teamsData = league[1] as Record<string, unknown>;
         const teamsCount = teamsData?.count as number;
-        
+
         for (let i = 0; i < teamsCount; i++) {
-          const teamData = (teamsData?.[i.toString()] as Record<string, unknown>)?.team as unknown[];
+          const teamData = (teamsData?.[i.toString()] as Record<string, unknown>)
+            ?.team as unknown[];
           if (teamData?.[0]) {
             teams.push(this.mapTeam(teamData[0] as unknown[]));
           }
@@ -297,16 +292,16 @@ class YahooFantasyAPI {
         Object.assign(flatData, item);
       }
     }
-    
+
     // Parse team_logos - Yahoo nests it as [{team_logo: {url, size}}]
     let teamLogos: { url: string }[] | undefined;
     const rawLogos = flatData.team_logos as Array<{ team_logo?: { url: string } }> | undefined;
     if (rawLogos && rawLogos.length > 0) {
       teamLogos = rawLogos
         .filter((logo): logo is { team_logo: { url: string } } => Boolean(logo.team_logo?.url))
-        .map(logo => ({ url: logo.team_logo.url }));
+        .map((logo) => ({ url: logo.team_logo.url }));
     }
-    
+
     return {
       team_key: flatData.team_key as string,
       team_id: flatData.team_id as string,
@@ -315,9 +310,10 @@ class YahooFantasyAPI {
       team_logos: teamLogos,
       waiver_priority: flatData.waiver_priority as number,
       number_of_moves: flatData.number_of_moves as number,
-      number_of_trades: typeof flatData.number_of_trades === 'string' 
-        ? parseInt(flatData.number_of_trades, 10) 
-        : flatData.number_of_trades as number,
+      number_of_trades:
+        typeof flatData.number_of_trades === "string"
+          ? parseInt(flatData.number_of_trades, 10)
+          : (flatData.number_of_trades as number),
       roster_adds: flatData.roster_adds as YahooTeam["roster_adds"],
       league_scoring_type: flatData.league_scoring_type as string,
       managers: this.parseManagers(flatData.managers as unknown[]),
@@ -346,11 +342,15 @@ class YahooFantasyAPI {
       if (league?.[1]) {
         const standingsData = (league[1] as Record<string, unknown>).standings as unknown[];
         if (standingsData?.[0]) {
-          const teamsData = (standingsData[0] as Record<string, unknown>).teams as Record<string, unknown>;
+          const teamsData = (standingsData[0] as Record<string, unknown>).teams as Record<
+            string,
+            unknown
+          >;
           const teamsCount = teamsData?.count as number;
-          
+
           for (let i = 0; i < teamsCount; i++) {
-            const teamData = (teamsData?.[i.toString()] as Record<string, unknown>)?.team as unknown[];
+            const teamData = (teamsData?.[i.toString()] as Record<string, unknown>)
+              ?.team as unknown[];
             if (teamData) {
               standings.push(this.mapTeamStandings(teamData));
             }
@@ -365,35 +365,57 @@ class YahooFantasyAPI {
 
   private mapTeamStandings(data: unknown[]): YahooTeamStandings {
     const team = this.mapTeam(data[0] as unknown[]);
-    
+
     // Yahoo returns: data[0] = team info, data[1] = team_points, data[2] = team_standings
     const pointsData = data[1] as Record<string, unknown> | undefined;
     const standingsData = data[2] as Record<string, unknown> | undefined;
-    
+
     // Parse team_standings with proper type conversion
     const rawStandings = standingsData?.team_standings as Record<string, unknown> | undefined;
-    const teamStandings = rawStandings ? {
-      rank: parseInt(rawStandings.rank as string, 10) || 0,
-      playoff_seed: rawStandings.playoff_seed ? parseInt(rawStandings.playoff_seed as string, 10) : undefined,
-      outcome_totals: {
-        wins: parseInt((rawStandings.outcome_totals as Record<string, unknown>)?.wins as string, 10) || 0,
-        losses: parseInt((rawStandings.outcome_totals as Record<string, unknown>)?.losses as string, 10) || 0,
-        ties: parseInt(String((rawStandings.outcome_totals as Record<string, unknown>)?.ties || 0), 10) || 0,
-        percentage: parseFloat((rawStandings.outcome_totals as Record<string, unknown>)?.percentage as string) || 0,
-      },
-      points_for: parseFloat(rawStandings.points_for as string) || 0,
-      points_against: typeof rawStandings.points_against === 'number' 
-        ? rawStandings.points_against 
-        : parseFloat(rawStandings.points_against as string) || 0,
-    } : undefined;
-    
+    const teamStandings = rawStandings
+      ? {
+          rank: parseInt(rawStandings.rank as string, 10) || 0,
+          playoff_seed: rawStandings.playoff_seed
+            ? parseInt(rawStandings.playoff_seed as string, 10)
+            : undefined,
+          outcome_totals: {
+            wins:
+              parseInt(
+                (rawStandings.outcome_totals as Record<string, unknown>)?.wins as string,
+                10,
+              ) || 0,
+            losses:
+              parseInt(
+                (rawStandings.outcome_totals as Record<string, unknown>)?.losses as string,
+                10,
+              ) || 0,
+            ties:
+              parseInt(
+                String((rawStandings.outcome_totals as Record<string, unknown>)?.ties || 0),
+                10,
+              ) || 0,
+            percentage:
+              parseFloat(
+                (rawStandings.outcome_totals as Record<string, unknown>)?.percentage as string,
+              ) || 0,
+          },
+          points_for: parseFloat(rawStandings.points_for as string) || 0,
+          points_against:
+            typeof rawStandings.points_against === "number"
+              ? rawStandings.points_against
+              : parseFloat(rawStandings.points_against as string) || 0,
+        }
+      : undefined;
+
     // Parse team_points
     const rawPoints = pointsData?.team_points as Record<string, unknown> | undefined;
-    const teamPoints = rawPoints ? {
-      coverage_type: rawPoints.coverage_type as string,
-      total: parseFloat(rawPoints.total as string) || 0,
-    } : undefined;
-    
+    const teamPoints = rawPoints
+      ? {
+          coverage_type: rawPoints.coverage_type as string,
+          total: parseFloat(rawPoints.total as string) || 0,
+        }
+      : undefined;
+
     return {
       team,
       team_standings: teamStandings,
@@ -408,11 +430,15 @@ class YahooFantasyAPI {
       const team = fantasy?.team as unknown[];
       if (team?.[1]) {
         const roster = (team[1] as Record<string, unknown>).roster as Record<string, unknown>;
-        const playersData = (roster?.["0"] as Record<string, unknown>)?.players as Record<string, unknown>;
+        const playersData = (roster?.["0"] as Record<string, unknown>)?.players as Record<
+          string,
+          unknown
+        >;
         const playersCount = playersData?.count as number;
-        
+
         for (let i = 0; i < playersCount; i++) {
-          const playerData = (playersData?.[i.toString()] as Record<string, unknown>)?.player as unknown[];
+          const playerData = (playersData?.[i.toString()] as Record<string, unknown>)
+            ?.player as unknown[];
           if (playerData) {
             players.push(this.mapRosterPlayer(playerData));
           }
@@ -427,7 +453,7 @@ class YahooFantasyAPI {
   private mapRosterPlayer(data: unknown[]): YahooRosterPlayer {
     const playerInfo = data[0] as unknown[];
     const playerStats = data[1] as Record<string, unknown>;
-    
+
     // Flatten player info array
     const flatPlayer: Record<string, unknown> = {};
     for (const item of playerInfo) {
@@ -435,9 +461,9 @@ class YahooFantasyAPI {
         Object.assign(flatPlayer, item);
       }
     }
-    
+
     const name = flatPlayer.name as Record<string, string>;
-    
+
     return {
       player_key: flatPlayer.player_key as string,
       player_id: flatPlayer.player_id as string,
@@ -469,12 +495,19 @@ class YahooFantasyAPI {
       const fantasy = data.fantasy_content as Record<string, unknown>;
       const league = fantasy?.league as unknown[];
       if (league?.[1]) {
-        const scoreboard = (league[1] as Record<string, unknown>).scoreboard as Record<string, unknown>;
-        const matchupsData = (scoreboard?.["0"] as Record<string, unknown>)?.matchups as Record<string, unknown>;
+        const scoreboard = (league[1] as Record<string, unknown>).scoreboard as Record<
+          string,
+          unknown
+        >;
+        const matchupsData = (scoreboard?.["0"] as Record<string, unknown>)?.matchups as Record<
+          string,
+          unknown
+        >;
         const matchupsCount = matchupsData?.count as number;
-        
+
         for (let i = 0; i < matchupsCount; i++) {
-          const matchupData = (matchupsData?.[i.toString()] as Record<string, unknown>)?.matchup as Record<string, unknown>;
+          const matchupData = (matchupsData?.[i.toString()] as Record<string, unknown>)
+            ?.matchup as Record<string, unknown>;
           if (matchupData) {
             matchups.push(this.mapMatchup(matchupData));
           }
@@ -489,7 +522,7 @@ class YahooFantasyAPI {
   private mapMatchup(data: Record<string, unknown>): YahooMatchup {
     const teamsData = (data["0"] as Record<string, unknown>)?.teams as Record<string, unknown>;
     const teams: YahooTeamStandings[] = [];
-    
+
     if (teamsData) {
       const teamsCount = teamsData.count as number;
       for (let i = 0; i < teamsCount; i++) {
@@ -499,7 +532,7 @@ class YahooFantasyAPI {
         }
       }
     }
-    
+
     return {
       week: data.week as string,
       week_start: data.week_start as string,

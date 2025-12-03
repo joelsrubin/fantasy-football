@@ -34,7 +34,7 @@ export async function GET() {
           Accept: "application/json",
         },
         next: { revalidate: 300, tags: ["yahoo-api", "my-leagues"] },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -46,10 +46,10 @@ export async function GET() {
 
     // Parse the response
     const seasons: SeasonData[] = [];
-    
+
     const users = data.fantasy_content?.users;
     const user = users?.["0"]?.user;
-    
+
     if (!user) {
       return NextResponse.json({ seasons: [] });
     }
@@ -97,14 +97,14 @@ export async function GET() {
     }
 
     // Sort seasons descending (newest first)
-    seasons.sort((a, b) => parseInt(b.season) - parseInt(a.season));
+    seasons.sort((a, b) => parseInt(b.season, 10) - parseInt(a.season, 10));
 
     return NextResponse.json({ seasons });
   } catch (error) {
     console.error("Error fetching leagues:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch leagues" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

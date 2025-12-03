@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, use } from "react";
 import Link from "next/link";
-import { useLeague, useStandings, useScoreboard } from "@/lib/hooks/use-fantasy-data";
-import type { YahooLeague, YahooTeamStandings, YahooMatchup } from "@/lib/yahoo-fantasy";
+import { use, useState } from "react";
+import { useLeague, useScoreboard, useStandings } from "@/lib/hooks/use-fantasy-data";
+import type { YahooLeague, YahooMatchup, YahooTeamStandings } from "@/lib/yahoo-fantasy";
 
 type Tab = "standings" | "scoreboard";
 
-export default function LeaguePage({
-  params,
-}: {
-  params: Promise<{ leagueId: string }>;
-}) {
+export default function LeaguePage({ params }: { params: Promise<{ leagueId: string }> }) {
   const { leagueId } = use(params);
   const [activeTab, setActiveTab] = useState<Tab>("standings");
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -41,8 +37,19 @@ export default function LeaguePage({
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
-            <svg className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              className="h-8 w-8 text-red-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
           </div>
           <h2 className="mb-2 text-xl font-semibold text-white">Error Loading League</h2>
@@ -51,8 +58,19 @@ export default function LeaguePage({
             href="/"
             className="inline-flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
             </svg>
             Back to Home
           </Link>
@@ -68,8 +86,19 @@ export default function LeaguePage({
         href="/"
         className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
         </svg>
         Back to Home
       </Link>
@@ -190,22 +219,19 @@ function StandingsTable({
                 (standing.team_standings?.points_against || 0);
 
               return (
-                <tr
-                  key={standing.team.team_key}
-                  className="transition-colors hover:bg-zinc-800/30"
-                >
+                <tr key={standing.team.team_key} className="transition-colors hover:bg-zinc-800/30">
                   <td className="px-6 py-4">
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
                         rank === 1
                           ? "bg-amber-500/20 text-amber-400"
                           : rank === 2
-                          ? "bg-zinc-400/20 text-zinc-300"
-                          : rank === 3
-                          ? "bg-orange-600/20 text-orange-400"
-                          : isPlayoff
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-zinc-800 text-zinc-500"
+                            ? "bg-zinc-400/20 text-zinc-300"
+                            : rank === 3
+                              ? "bg-orange-600/20 text-orange-400"
+                              : isPlayoff
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-zinc-800 text-zinc-500"
                       }`}
                     >
                       {rank}
@@ -261,8 +287,8 @@ function StandingsTable({
                         pointsDiff > 0
                           ? "text-emerald-400"
                           : pointsDiff < 0
-                          ? "text-red-400"
-                          : "text-zinc-500"
+                            ? "text-red-400"
+                            : "text-zinc-500"
                       }`}
                     >
                       {pointsDiff > 0 ? "+" : ""}
@@ -297,7 +323,7 @@ function Scoreboard({
   return (
     <div className="space-y-6">
       {/* Week Selector */}
-     
+
       <div className="flex items-center justify-center gap-4">
         <button
           type="button"
@@ -305,33 +331,54 @@ function Scoreboard({
           disabled={selectedWeek === 1}
           className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
-       
+
         <div className="text-center">
-          <span className={`text-2xl font-bold ${selectedWeek === league.current_week ? "text-emerald-300" : "text-white"}`}>Week {selectedWeek}</span>
+          <span
+            className={`text-2xl font-bold ${selectedWeek === league.current_week ? "text-emerald-300" : "text-white"}`}
+          >
+            Week {selectedWeek}
+          </span>
         </div>
         <button
           type="button"
-          onClick={() => setSelectedWeek(Math.min(parseInt(league.end_week), selectedWeek + 1))}
-          disabled={selectedWeek === parseInt(league.end_week)}
+          onClick={() => setSelectedWeek(Math.min(parseInt(league.end_week, 10), selectedWeek + 1))}
+          disabled={selectedWeek === parseInt(league.end_week, 10)}
           className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
       </div>
-     
+
       {/* Matchups Grid */}
       <div className="grid gap-4 md:grid-cols-2">
         {matchups.map((matchup) => (
-          <MatchupCard 
-            key={`${matchup.week}-${matchup.teams[0]?.team.team_key}-${matchup.teams[1]?.team.team_key}`} 
-            matchup={matchup} 
-            leagueId={leagueId} 
+          <MatchupCard
+            key={`${matchup.week}-${matchup.teams[0]?.team.team_key}-${matchup.teams[1]?.team.team_key}`}
+            matchup={matchup}
+            leagueId={leagueId}
           />
         ))}
       </div>
@@ -382,7 +429,9 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
             </picture>
           )}
           <div className="flex-1 min-w-0">
-            <div className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team1Wins ? "text-emerald-400" : "text-white"}`}>
+            <div
+              className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team1Wins ? "text-emerald-400" : "text-white"}`}
+            >
               {team1.team.name}
             </div>
             <div className="text-xs text-zinc-500">
@@ -395,8 +444,17 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
           </div>
           {team1Wins && (
             <div className="rounded-full bg-emerald-500/20 p-1">
-              <svg className="h-4 w-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              <svg
+                className="h-4 w-4 text-emerald-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
           )}
@@ -426,7 +484,9 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
             </picture>
           )}
           <div className="flex-1 min-w-0">
-            <div className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team2Wins ? "text-emerald-400" : "text-white"}`}>
+            <div
+              className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team2Wins ? "text-emerald-400" : "text-white"}`}
+            >
               {team2.team.name}
             </div>
             <div className="text-xs text-zinc-500">
@@ -439,8 +499,17 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
           </div>
           {team2Wins && (
             <div className="rounded-full bg-emerald-500/20 p-1">
-              <svg className="h-4 w-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              <svg
+                className="h-4 w-4 text-emerald-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
           )}
