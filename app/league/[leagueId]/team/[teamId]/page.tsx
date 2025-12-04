@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { use } from "react";
+import { parseAsInteger, useQueryState } from "nuqs";
 import { useLeague, useTeamRoster } from "@/lib/hooks/use-fantasy-data";
 import type { YahooRosterPlayer } from "@/lib/yahoo-fantasy";
 
@@ -24,24 +25,23 @@ export default function TeamPage({
   params: Promise<{ leagueId: string; teamId: string }>;
 }) {
   const { leagueId, teamId } = use(params);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
 
-  // Set initial week when league loads
-  useEffect(() => {
-    if (league && selectedWeek === null) {
-      setSelectedWeek(league.current_week);
-    }
-  }, [league, selectedWeek]);
+  // Use nuqs for URL-synced week state, defaulting to league's current week
+  const [selectedWeek, setSelectedWeek] = useQueryState(
+    "week",
+    parseAsInteger.withDefault(league?.current_week ?? 1),
+  );
 
-  // Only fetch roster once we have a week (important for prior year leagues)
+  // Only fetch roster once we have league data (so we know the default week)
   const {
     data: roster,
     isLoading: rosterLoading,
     error,
-  } = useTeamRoster(leagueId, teamId, selectedWeek ?? undefined);
-  const isLoading = leagueLoading || rosterLoading || selectedWeek === null;
+  } = useTeamRoster(leagueId, teamId, league ? selectedWeek : undefined);
+
+  const isLoading = leagueLoading || rosterLoading;
 
   if (error) {
     return (
@@ -124,7 +124,7 @@ export default function TeamPage({
       </Link>
 
       {/* Week Selector & Points */}
-      {league && selectedWeek && (
+      {league && (
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -150,13 +150,18 @@ export default function TeamPage({
             </button>
             <div className="text-center">
               <span className="text-2xl font-bold text-white">Week {selectedWeek}</span>
+              {selectedWeek === league.current_week && (
+                <span className="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                  Current
+                </span>
+              )}
             </div>
             <button
               type="button"
               onClick={() =>
-                setSelectedWeek(Math.min(parseInt(league.end_week, 10), selectedWeek + 1))
+                setSelectedWeek(Math.min(Number.parseInt(league.end_week, 10), selectedWeek + 1))
               }
-              disabled={selectedWeek === parseInt(league.end_week, 10)}
+              disabled={selectedWeek === Number.parseInt(league.end_week, 10)}
               className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
             >
               <svg
@@ -193,13 +198,8 @@ export default function TeamPage({
         <div className="space-y-6">
           {/* Starters */}
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
-            <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4 flex items-center justify-between">
+            <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4">
               <h2 className="text-lg font-semibold text-white">Starting Lineup</h2>
-              {selectedWeek === league?.current_week && (
-                <span className="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                  Current
-                </span>
-              )}
             </div>
             <div className="divide-y divide-zinc-800/50">
               {starters.map((player) => (

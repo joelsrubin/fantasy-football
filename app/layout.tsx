@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
-import "./globals.css";
-import { QueryProvider } from "@/lib/query-client";
 import { Analytics } from "@vercel/analytics/next";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { QueryProvider } from "@/lib/query-client";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import type { Metadata } from "next";
+import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-sans",
@@ -77,7 +78,7 @@ export default function RootLayout({
           {/* Main Content */}
           <main className="relative">
             <QueryProvider>
-              {children}
+              <NuqsAdapter>{children}</NuqsAdapter>
               <Analytics />
             </QueryProvider>
           </main>
