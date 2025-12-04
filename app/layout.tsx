@@ -16,18 +16,18 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Bodega Bottle Service HQ",
   description: "The home for historical stats",
-  // icon.svg in app/ directory is automatically used as favicon
+  // icon.png in app/ directory is automatically used as favicon
   openGraph: {
     title: "Bodega Bottle Service HQ",
     description: "The home for historical stats",
     type: "website",
-    images: ["/og-icon.svg"],
+    images: ["/og-icon.png"],
   },
   twitter: {
     card: "summary",
     title: "Bodega Bottle Service HQ",
     description: "The home for historical stats",
-    images: ["/og-icon.svg"],
+    images: ["/og-icon.png"],
   },
 };
 
