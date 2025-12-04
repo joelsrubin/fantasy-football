@@ -325,59 +325,66 @@ function Scoreboard({
   isLoading: boolean;
 }) {
   if (!league || !selectedWeek) return null;
-
+  const isNow = league?.season === new Date().getFullYear().toString();
+  console.log({ isNow });
   return (
     <div className="space-y-6">
       {/* Week Selector */}
 
-      <div className="flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => setSelectedWeek(Math.max(1, selectedWeek - 1))}
-          disabled={selectedWeek === 1}
-          className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
+      <div className="flex items-center gap-4 mx-auto">
+        <div className="flex self-start gap-4">
+          <button
+            type="button"
+            onClick={() => setSelectedWeek(Math.max(1, selectedWeek - 1))}
+            disabled={selectedWeek === 1}
+            className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
 
-        <div className="text-center">
-          <span
-            className={`text-2xl font-bold ${selectedWeek === league.current_week ? "text-emerald-300" : "text-white"}`}
+          <div className="text-center">
+            <span className={`text-2xl font-bold "text-white self-baseline`}>
+              Week {selectedWeek}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setSelectedWeek(Math.min(parseInt(league.end_week, 10), selectedWeek + 1))
+            }
+            disabled={selectedWeek === parseInt(league.end_week, 10)}
+            className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
           >
-            Week {selectedWeek}
-          </span>
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setSelectedWeek(Math.min(parseInt(league.end_week, 10), selectedWeek + 1))}
-          disabled={selectedWeek === parseInt(league.end_week, 10)}
-          className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+        {selectedWeek === league?.current_week && isNow && (
+          <span className="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+            Current
+          </span>
+        )}
       </div>
-
       {/* Matchups Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
