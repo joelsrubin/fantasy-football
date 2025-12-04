@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/query-client";
+import { Analytics } from "@vercel/analytics/next";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-sans",
@@ -75,7 +76,10 @@ export default function RootLayout({
 
           {/* Main Content */}
           <main className="relative">
-            <QueryProvider>{children}</QueryProvider>
+            <QueryProvider>
+              {children}
+              <Analytics />
+            </QueryProvider>
           </main>
         </div>
       </body>
