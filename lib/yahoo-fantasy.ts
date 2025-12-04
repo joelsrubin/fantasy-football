@@ -1,3 +1,5 @@
+import { CACHE_ONE_YEAR } from "next/dist/lib/constants";
+
 const YAHOO_FANTASY_API_BASE = "https://fantasysports.yahooapis.com/fantasy/v2";
 
 // Cache revalidation times (in seconds) for Next.js fetch
@@ -150,7 +152,8 @@ class YahooFantasyAPI {
         Accept: "application/json",
       },
       // Disable caching to ensure fresh data
-      cache: "no-store",
+      cache: "force-cache",
+      next: { revalidate: 3600 },
     });
 
     if (!response.ok) {
