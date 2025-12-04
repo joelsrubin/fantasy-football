@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getYahooAccessToken } from "@/lib/yahoo-auth";
 import { createYahooFantasyAPI } from "@/lib/yahoo-fantasy";
 
+const ONE_YEAR = 31536000;
+const CURRENT_SEASON = new Date().getFullYear();
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ leagueId: string }> },
@@ -23,7 +26,18 @@ export async function GET(
       return NextResponse.json({ error: "League not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ league });
+    // Cache historical data for 1 year, current season for 5 minutes
+    const isHistorical = parseInt(league.season) < CURRENT_SEASON;
+    const maxAge = isHistorical ? ONE_YEAR : 300;
+
+    return NextResponse.json(
+      { league },
+      {
+        headers: {
+          "Cache-Control": `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`,
+        },
+      },
+    );
   } catch (error) {
     console.error("Error fetching league:", error);
     return NextResponse.json(

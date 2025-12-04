@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getYahooAccessToken } from "@/lib/yahoo-auth";
 import { createYahooFantasyAPI } from "@/lib/yahoo-fantasy";
 
+const ONE_YEAR = 31536000;
+const CURRENT_GAME_ID = "461"; // 2025 season
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ leagueId: string; teamId: string }> },
@@ -14,7 +17,11 @@ export async function GET(
 
     // Decode the leagueId in case it's URL encoded
     const decodedLeagueId = decodeURIComponent(leagueId);
-    const leagueKey = decodedLeagueId.includes(".l.") ? decodedLeagueId : `461.l.${decodedLeagueId}`;
+    const leagueKey = decodedLeagueId.includes(".l.")
+      ? decodedLeagueId
+      : `461.l.${decodedLeagueId}`;
+    const gameId = leagueKey.split(".")[0];
+    const isHistorical = gameId !== CURRENT_GAME_ID;
 
     const teamKey = `${leagueKey}.t.${teamId}`;
 
@@ -31,7 +38,17 @@ export async function GET(
 
     const roster = await api.getTeamRoster(teamKey, week);
 
-    return NextResponse.json({ roster });
+    // Cache historical data for 1 year, current season for 2 minutes
+    const maxAge = isHistorical ? ONE_YEAR : 120;
+
+    return NextResponse.json(
+      { roster },
+      {
+        headers: {
+          "Cache-Control": `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`,
+        },
+      },
+    );
   } catch (error) {
     console.error("Error fetching team roster:", error);
     return NextResponse.json(

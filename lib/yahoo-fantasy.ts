@@ -1,13 +1,14 @@
-import { CACHE_ONE_YEAR } from "next/dist/lib/constants";
-
 const YAHOO_FANTASY_API_BASE = "https://fantasysports.yahooapis.com/fantasy/v2";
 
 // Cache revalidation times (in seconds) for Next.js fetch
+const ONE_YEAR = 31536000; // 365 days in seconds
+
 const REVALIDATE = {
   LEAGUE: 300, // 5 minutes - league info rarely changes
   STANDINGS: 120, // 2 minutes - standings update after games
   SCOREBOARD: 60, // 1 minute - scores update during games
   ROSTER: 120, // 2 minutes - rosters can change with lineup moves
+  HISTORICAL: ONE_YEAR, // 1 year - historical data never changes
 };
 
 export interface YahooLeague {
@@ -143,7 +144,7 @@ class YahooFantasyAPI {
     this.accessToken = accessToken;
   }
 
-  private async request<T>(endpoint: string, _revalidate?: number): Promise<T> {
+  private async request<T>(endpoint: string, revalidate: number = 300): Promise<T> {
     const url = `${YAHOO_FANTASY_API_BASE}${endpoint}`;
 
     const response = await fetch(url, {
@@ -151,9 +152,7 @@ class YahooFantasyAPI {
         Authorization: `Bearer ${this.accessToken}`,
         Accept: "application/json",
       },
-      // Disable caching to ensure fresh data
-      cache: "force-cache",
-      next: { revalidate: 3600 },
+      next: { revalidate },
     });
 
     if (!response.ok) {
