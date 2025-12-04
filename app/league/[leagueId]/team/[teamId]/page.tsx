@@ -27,7 +27,7 @@ export default function TeamPage({
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
-  
+
   // Set initial week when league loads
   useEffect(() => {
     if (league && selectedWeek === null) {
@@ -150,11 +150,6 @@ export default function TeamPage({
             </button>
             <div className="text-center">
               <span className="text-2xl font-bold text-white">Week {selectedWeek}</span>
-              {selectedWeek === league.current_week && (
-                <span className="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                  Current
-                </span>
-              )}
             </div>
             <button
               type="button"
@@ -198,8 +193,13 @@ export default function TeamPage({
         <div className="space-y-6">
           {/* Starters */}
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
-            <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4">
+            <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Starting Lineup</h2>
+              {selectedWeek === league?.current_week && (
+                <span className="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                  Current
+                </span>
+              )}
             </div>
             <div className="divide-y divide-zinc-800/50">
               {starters.map((player) => (
