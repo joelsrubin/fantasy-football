@@ -1,12 +1,14 @@
 /**
  * Server-side Yahoo OAuth token management
- * Uses Redis in production, falls back to local file in development
+ * Uses Redis in production (with file fallback for initial tokens),
+ * uses local file only in development
  */
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { createClient } from "redis";
+
 export interface TokenData {
   accessToken: string;
   refreshToken: string;
@@ -26,58 +28,106 @@ async function getRedisClient() {
   if (!redisClient) {
     const redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
-      throw new Error("REDIS_URL environment variable is not set");
+      return null;
     }
-    redisClient = createClient({ url: redisUrl });
-    await redisClient.connect();
+    try {
+      redisClient = createClient({ url: redisUrl });
+      await redisClient.connect();
+    } catch (error) {
+      console.error("Failed to connect to Redis:", error);
+      return null;
+    }
   }
   return redisClient;
 }
 
-// Check if we're in production (Redis URL available)
-function isProduction(): boolean {
-  return !!process.env.REDIS_URL;
+// Check if Redis is available
+async function hasRedis(): Promise<boolean> {
+  const client = await getRedisClient();
+  return client !== null;
+}
+
+async function loadTokensFromFile(): Promise<TokenData | null> {
+  try {
+    const data = await readFile(TOKEN_FILE, "utf-8");
+    return JSON.parse(data) as TokenData;
+  } catch {
+    return null;
+  }
+}
+
+async function saveTokensToFile(tokens: TokenData): Promise<void> {
+  try {
+    await writeFile(TOKEN_FILE, JSON.stringify(tokens, null, 2));
+  } catch (error) {
+    // In production, file system is read-only - this is expected
+    console.log("Could not write to file (expected in production):", error);
+  }
+}
+
+async function loadTokensFromRedis(): Promise<TokenData | null> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return null;
+    
+    const data = await redis.get(TOKEN_KEY);
+    if (data) {
+      return JSON.parse(data) as TokenData;
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to load tokens from Redis:", error);
+    return null;
+  }
+}
+
+async function saveTokensToRedis(tokens: TokenData): Promise<boolean> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return false;
+    
+    await redis.set(TOKEN_KEY, JSON.stringify(tokens));
+    return true;
+  } catch (error) {
+    console.error("Failed to save tokens to Redis:", error);
+    return false;
+  }
 }
 
 async function loadTokens(): Promise<TokenData | null> {
-  if (isProduction()) {
-    // Use Redis in production
-    try {
-      const redis = await getRedisClient();
-      const data = await redis.get(TOKEN_KEY);
-      if (data) {
-        return JSON.parse(data) as TokenData;
-      }
-      return null;
-    } catch (error) {
-      console.error("Failed to load tokens from Redis:", error);
-      return null;
+  // Try Redis first (if available)
+  if (await hasRedis()) {
+    const redisTokens = await loadTokensFromRedis();
+    if (redisTokens) {
+      return redisTokens;
     }
-  } else {
-    // Use local file in development
-    try {
-      const data = await readFile(TOKEN_FILE, "utf-8");
-      return JSON.parse(data) as TokenData;
-    } catch {
-      return null;
+    
+    // Redis is empty - try to migrate from file
+    const fileTokens = await loadTokensFromFile();
+    if (fileTokens) {
+      console.log("Migrating tokens from file to Redis...");
+      await saveTokensToRedis(fileTokens);
+      return fileTokens;
     }
+    
+    return null;
   }
+  
+  // No Redis - use file (development mode)
+  return loadTokensFromFile();
 }
 
 async function saveTokens(tokens: TokenData): Promise<void> {
-  if (isProduction()) {
-    // Use Redis in production
-    try {
-      const redis = await getRedisClient();
-      await redis.set(TOKEN_KEY, JSON.stringify(tokens));
-    } catch (error) {
-      console.error("Failed to save tokens to Redis:", error);
-      throw error;
+  // Try Redis first
+  if (await hasRedis()) {
+    const saved = await saveTokensToRedis(tokens);
+    if (saved) {
+      return;
     }
-  } else {
-    // Use local file in development
-    await writeFile(TOKEN_FILE, JSON.stringify(tokens, null, 2));
   }
+  
+  // Fall back to file (development mode or Redis failure)
+  await saveTokensToFile(tokens);
 }
 
 async function refreshAccessToken(currentRefreshToken: string): Promise<TokenData> {
@@ -146,9 +196,7 @@ export async function getYahooAccessToken(): Promise<string> {
   }
 
   throw new Error(
-    isProduction()
-      ? "No Yahoo tokens found in Redis. Please set up tokens using the setup endpoint."
-      : "No Yahoo tokens found. Run 'pnpm run setup-yahoo' to authenticate with Yahoo.",
+    "No Yahoo tokens found. Run 'pnpm run setup-yahoo' locally to authenticate with Yahoo.",
   );
 }
 
