@@ -14,7 +14,10 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
 
   const { data: league, isLoading: leagueLoading, error: leagueError } = useLeague(leagueId);
   const { data: standings, isLoading: standingsLoading } = useStandings(leagueId);
-  const { data: matchups, isFetching: scoreboardFetching } = useScoreboard(leagueId, selectedWeek ?? undefined);
+  const { data: matchups, isFetching: scoreboardFetching } = useScoreboard(
+    leagueId,
+    selectedWeek ?? undefined,
+  );
 
   // Set initial week when league loads
   if (league && selectedWeek === null) {

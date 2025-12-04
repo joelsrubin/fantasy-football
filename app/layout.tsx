@@ -1,8 +1,8 @@
 import { Analytics } from "@vercel/analytics/next";
+import type { Metadata } from "next";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { QueryProvider } from "@/lib/query-client";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
-import type { Metadata } from "next";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
