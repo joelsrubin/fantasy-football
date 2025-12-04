@@ -492,7 +492,7 @@ class YahooFantasyAPI {
 
     // player_points could be at data[3] or elsewhere - search for it
     let playerPoints: YahooRosterPlayer["player_points"];
-    
+
     // Try to find player_points in the data array
     for (let i = 1; i < data.length; i++) {
       const item = data[i];

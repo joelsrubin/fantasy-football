@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { use } from "react";
 import { useLeague, useTeamRoster } from "@/lib/hooks/use-fantasy-data";
@@ -25,7 +26,7 @@ export default function TeamPage({
   params: Promise<{ leagueId: string; teamId: string }>;
 }) {
   const { leagueId, teamId } = use(params);
-
+  const searchParams = useSearchParams();
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
   const isNow = league?.season === new Date().getFullYear().toString();
 
@@ -100,11 +101,17 @@ export default function TeamPage({
 
   const totalPoints = starters.reduce((sum, p) => sum + (p.player_points?.total || 0), 0);
 
+  const prev = searchParams.get("prev");
+  const week = searchParams.get("week");
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
       {/* Back Button */}
       <Link
-        href={`/league/${leagueId}`}
+        href={
+          prev === "scoreboard"
+            ? `/league/${leagueId}?tab=scoreboard&week=${week}`
+            : `/league/${leagueId}`
+        }
         className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
       >
         <svg
@@ -121,7 +128,7 @@ export default function TeamPage({
             d="M10 19l-7-7m0 0l7-7m-7 7h18"
           />
         </svg>
-        Back to League
+        {prev === "scoreboard" ? "Back to Scoreboard" : "Back to League"}
       </Link>
 
       {/* Week Selector & Points */}

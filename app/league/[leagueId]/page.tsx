@@ -1,28 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { use } from "react";
 import { useLeague, useScoreboard, useStandings } from "@/lib/hooks/use-fantasy-data";
 import type { YahooLeague, YahooMatchup, YahooTeamStandings } from "@/lib/yahoo-fantasy";
 
-type Tab = "standings" | "scoreboard";
+const tabs = ["standings", "scoreboard"] as const;
+type Tab = (typeof tabs)[number];
 
 export default function LeaguePage({ params }: { params: Promise<{ leagueId: string }> }) {
   const { leagueId } = use(params);
-  const [activeTab, setActiveTab] = useState<Tab>("standings");
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(tabs).withDefault("standings"),
+  );
+  const [selectedWeek, setSelectedWeek] = useQueryState("week", parseAsInteger.withDefault(0));
 
   const { data: league, isLoading: leagueLoading, error: leagueError } = useLeague(leagueId);
   const { data: standings, isLoading: standingsLoading } = useStandings(leagueId);
-  const { data: matchups, isFetching: scoreboardFetching } = useScoreboard(
-    leagueId,
-    selectedWeek ?? undefined,
-  );
 
-  // Set initial week when league loads
-  if (league && selectedWeek === null) {
+  // Set initial week when league loads (only if not already set via URL)
+  if (league && selectedWeek === 0) {
     setSelectedWeek(league.current_week);
   }
+
+  // Use the effective week for scoreboard (fallback to league's current week)
+  const effectiveWeek = selectedWeek || league?.current_week;
+  const { data: matchups, isFetching: scoreboardFetching } = useScoreboard(leagueId, effectiveWeek);
 
   if (leagueLoading || standingsLoading) {
     return (
@@ -318,13 +323,13 @@ function Scoreboard({
   isLoading,
 }: {
   matchups: YahooMatchup[];
-  selectedWeek: number | null;
+  selectedWeek: number;
   setSelectedWeek: (week: number) => void;
   league: YahooLeague | null;
   leagueId: string;
   isLoading: boolean;
 }) {
-  if (!league || !selectedWeek) return null;
+  if (!league || selectedWeek === 0) return null;
   const isNow = league?.season === new Date().getFullYear().toString();
   console.log({ isNow });
   return (
@@ -434,7 +439,7 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
       <div className="p-4">
         {/* Team 1 */}
         <Link
-          href={`/league/${leagueId}/team/${team1.team.team_id}`}
+          href={`/league/${leagueId}/team/${team1.team.team_id}?week=${matchup.week}&prev=scoreboard`}
           className={`group flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-zinc-800/50 ${
             team1Wins ? "bg-emerald-500/5" : ""
           }`}
@@ -489,7 +494,7 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
 
         {/* Team 2 */}
         <Link
-          href={`/league/${leagueId}/team/${team2.team.team_id}`}
+          href={`/league/${leagueId}/team/${team2.team.team_id}?week=${matchup.week}&prev=scoreboard`}
           className={`group flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-zinc-800/50 ${
             team2Wins ? "bg-emerald-500/5" : ""
           }`}
