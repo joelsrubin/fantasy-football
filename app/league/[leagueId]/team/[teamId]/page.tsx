@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { use } from "react";
 import { useLeague, useTeamRoster } from "@/lib/hooks/use-fantasy-data";
+import { useWindowSize } from "@/lib/hooks/use-window.size";
 import type { YahooRosterPlayer } from "@/lib/yahoo-fantasy";
 
 const positionColors: Record<string, string> = {
@@ -254,6 +255,8 @@ function PlayerRow({ player }: { player: YahooRosterPlayer }) {
   const displayPosition = position === "W_R_T" ? "FLEX" : position;
   const positionClass = positionColors[position] || positionColors.BN;
 
+  const { isMobile } = useWindowSize();
+
   return (
     <div className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-zinc-800/30">
       {/* Position Badge */}
@@ -265,7 +268,7 @@ function PlayerRow({ player }: { player: YahooRosterPlayer }) {
 
       {/* Player Info */}
       <div className="flex flex-1 items-center gap-4">
-        {player.headshot?.url && (
+        {player.headshot?.url && !isMobile && (
           <picture>
             <img
               src={player.headshot.url}

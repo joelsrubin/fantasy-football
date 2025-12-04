@@ -4,6 +4,7 @@ import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { use } from "react";
 import { useLeague, useScoreboard, useStandings } from "@/lib/hooks/use-fantasy-data";
+import { useWindowSize } from "@/lib/hooks/use-window.size";
 import type { YahooLeague, YahooMatchup, YahooTeamStandings } from "@/lib/yahoo-fantasy";
 
 const tabs = ["standings", "scoreboard"] as const;
@@ -199,6 +200,8 @@ function StandingsTable({
     );
   }
 
+  const { isMobile } = useWindowSize();
+
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
       <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4">
@@ -211,12 +214,16 @@ function StandingsTable({
               <th className="px-6 py-4">Rank</th>
               <th className="px-6 py-4">Team</th>
               <th className="px-6 py-4 text-center">W</th>
-              <th className="px-6 py-4 text-center">L</th>
-              <th className="px-6 py-4 text-center">T</th>
-              <th className="px-6 py-4 text-right">Win %</th>
-              <th className="px-6 py-4 text-right">PF</th>
-              <th className="px-6 py-4 text-right">PA</th>
-              <th className="px-6 py-4 text-right">Diff</th>
+              {!isMobile && (
+                <>
+                  <th className="px-6 py-4 text-center">L</th>
+                  <th className="px-6 py-4 text-center">T</th>
+                  <th className="px-6 py-4 text-right">Win %</th>
+                  <th className="px-6 py-4 text-right">PF</th>
+                  <th className="px-6 py-4 text-right">PA</th>
+                  <th className="px-6 py-4 text-right">Diff</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/50">
@@ -275,35 +282,45 @@ function StandingsTable({
                   <td className="px-6 py-4 text-center font-semibold text-emerald-400">
                     {standing.team_standings?.outcome_totals.wins || 0}
                   </td>
-                  <td className="px-6 py-4 text-center font-semibold text-red-400">
-                    {standing.team_standings?.outcome_totals.losses || 0}
-                  </td>
-                  <td className="px-6 py-4 text-center font-semibold text-zinc-500">
-                    {standing.team_standings?.outcome_totals.ties || 0}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-sm text-zinc-300">
-                    {((standing.team_standings?.outcome_totals.percentage || 0) * 100).toFixed(0)}%
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-white">
-                    {standing.team_standings?.points_for?.toFixed(1) || "0.0"}
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-zinc-400">
-                    {standing.team_standings?.points_against?.toFixed(1) || "0.0"}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span
-                      className={`font-semibold ${
-                        pointsDiff > 0
-                          ? "text-emerald-400"
-                          : pointsDiff < 0
-                            ? "text-red-400"
-                            : "text-zinc-500"
-                      }`}
-                    >
-                      {pointsDiff > 0 ? "+" : ""}
-                      {pointsDiff.toFixed(1)}
-                    </span>
-                  </td>
+                  {!isMobile && (
+                    <>
+                      <td className="px-6 py-4 text-center font-semibold text-emerald-400">
+                        {standing.team_standings?.outcome_totals.wins || 0}
+                      </td>
+                      <td className="px-6 py-4 text-center font-semibold text-red-400">
+                        {standing.team_standings?.outcome_totals.losses || 0}
+                      </td>
+                      <td className="px-6 py-4 text-center font-semibold text-zinc-500">
+                        {standing.team_standings?.outcome_totals.ties || 0}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-zinc-300">
+                        {((standing.team_standings?.outcome_totals.percentage || 0) * 100).toFixed(
+                          0,
+                        )}
+                        %
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-white">
+                        {standing.team_standings?.points_for?.toFixed(1) || "0.0"}
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-zinc-400">
+                        {standing.team_standings?.points_against?.toFixed(1) || "0.0"}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span
+                          className={`font-semibold ${
+                            pointsDiff > 0
+                              ? "text-emerald-400"
+                              : pointsDiff < 0
+                                ? "text-red-400"
+                                : "text-zinc-500"
+                          }`}
+                        >
+                          {pointsDiff > 0 ? "+" : ""}
+                          {pointsDiff.toFixed(1)}
+                        </span>
+                      </td>
+                    </>
+                  )}
                 </tr>
               );
             })}
