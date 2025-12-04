@@ -253,7 +253,7 @@ function StandingsTable({
                       {rank}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="max-w-[200px] px-6 py-4 sm:max-w-[300px]">
                     <Link
                       href={`/league/${leagueId}/team/${standing.team.team_id}`}
                       className="group flex items-center gap-3"
@@ -263,16 +263,16 @@ function StandingsTable({
                           <img
                             src={standing.team.team_logos[0].url}
                             alt={standing.team.name}
-                            className="h-10 w-10 rounded-lg bg-zinc-800 object-cover"
+                            className="h-10 min-w-10 w-10 shrink-0 rounded-lg bg-zinc-800 object-cover"
                           />
                         </picture>
                       )}
-                      <div>
-                        <div className="font-semibold text-white group-hover:text-violet-400 transition-colors">
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-white group-hover:text-violet-400 transition-colors">
                           {standing.team.name}
                         </div>
                         {standing.team.managers?.[0]?.nickname && (
-                          <div className="text-xs text-zinc-500">
+                          <div className="truncate text-xs text-zinc-500">
                             {standing.team.managers[0].nickname}
                           </div>
                         )}
@@ -348,7 +348,7 @@ function Scoreboard({
 }) {
   if (!league || selectedWeek === 0) return null;
   const isNow = league?.season === new Date().getFullYear().toString();
-  console.log({ isNow });
+
   return (
     <div className="space-y-6">
       {/* Week Selector */}
@@ -466,7 +466,7 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
               <img
                 src={team1.team.team_logos[0].url}
                 alt={team1.team.name}
-                className="h-12 w-12 rounded-lg bg-zinc-800 object-cover"
+                className="h-12 w-12 shrink-0 rounded-lg bg-zinc-800 object-cover"
               />
             </picture>
           )}
@@ -481,7 +481,9 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
               {team1.team_standings?.outcome_totals.losses || 0}
             </div>
           </div>
-          <div className={`text-2xl font-bold ${team1Wins ? "text-emerald-400" : "text-white"}`}>
+          <div
+            className={`shrink-0 text-2xl font-bold ${team1Wins ? "text-emerald-400" : "text-white"}`}
+          >
             {score1.toFixed(1)}
           </div>
           {team1Wins && (
@@ -521,7 +523,7 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
               <img
                 src={team2.team.team_logos[0].url}
                 alt={team2.team.name}
-                className="h-12 w-12 rounded-lg bg-zinc-800 object-cover"
+                className="h-12 w-12 shrink-0 rounded-lg bg-zinc-800 object-cover"
               />
             </picture>
           )}
@@ -536,7 +538,9 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
               {team2.team_standings?.outcome_totals.losses || 0}
             </div>
           </div>
-          <div className={`text-2xl font-bold ${team2Wins ? "text-emerald-400" : "text-white"}`}>
+          <div
+            className={`shrink-0 text-2xl font-bold ${team2Wins ? "text-emerald-400" : "text-white"}`}
+          >
             {score2.toFixed(1)}
           </div>
           {team2Wins && (
