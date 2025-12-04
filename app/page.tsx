@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { Suspense } from "react";
 import {
   type LeagueInfo,
   type RankingEntry,
@@ -13,6 +14,23 @@ const tabs = ["leagues", "rankings"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+            <span className="text-zinc-400">Loading...</span>
+          </div>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
     parseAsStringLiteral(tabs).withDefault("leagues"),
