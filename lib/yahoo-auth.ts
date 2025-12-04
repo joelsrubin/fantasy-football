@@ -1,32 +1,83 @@
 /**
  * Server-side Yahoo OAuth token management
- * Stores tokens in a local file so they can be updated when refreshed
+ * Uses Redis in production, falls back to local file in development
  */
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { createClient } from "redis";
 export interface TokenData {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
 }
 
+const TOKEN_KEY = "yahoo-tokens";
 const TOKEN_FILE = join(process.cwd(), ".yahoo-tokens.json");
 
+// In-memory cache for the current process
 let cachedToken: TokenData | null = null;
 
-async function loadTokensFromFile(): Promise<TokenData | null> {
-  try {
-    const data = await readFile(TOKEN_FILE, "utf-8");
-    return JSON.parse(data) as TokenData;
-  } catch {
-    return null;
+// Redis client singleton
+let redisClient: ReturnType<typeof createClient> | null = null;
+
+async function getRedisClient() {
+  if (!redisClient) {
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) {
+      throw new Error("REDIS_URL environment variable is not set");
+    }
+    redisClient = createClient({ url: redisUrl });
+    await redisClient.connect();
+  }
+  return redisClient;
+}
+
+// Check if we're in production (Redis URL available)
+function isProduction(): boolean {
+  return !!process.env.REDIS_URL;
+}
+
+async function loadTokens(): Promise<TokenData | null> {
+  if (isProduction()) {
+    // Use Redis in production
+    try {
+      const redis = await getRedisClient();
+      const data = await redis.get(TOKEN_KEY);
+      if (data) {
+        return JSON.parse(data) as TokenData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to load tokens from Redis:", error);
+      return null;
+    }
+  } else {
+    // Use local file in development
+    try {
+      const data = await readFile(TOKEN_FILE, "utf-8");
+      return JSON.parse(data) as TokenData;
+    } catch {
+      return null;
+    }
   }
 }
 
-async function saveTokensToFile(tokens: TokenData): Promise<void> {
-  await writeFile(TOKEN_FILE, JSON.stringify(tokens, null, 2));
+async function saveTokens(tokens: TokenData): Promise<void> {
+  if (isProduction()) {
+    // Use Redis in production
+    try {
+      const redis = await getRedisClient();
+      await redis.set(TOKEN_KEY, JSON.stringify(tokens));
+    } catch (error) {
+      console.error("Failed to save tokens to Redis:", error);
+      throw error;
+    }
+  } else {
+    // Use local file in development
+    await writeFile(TOKEN_FILE, JSON.stringify(tokens, null, 2));
+  }
 }
 
 async function refreshAccessToken(currentRefreshToken: string): Promise<TokenData> {
@@ -68,7 +119,7 @@ async function refreshAccessToken(currentRefreshToken: string): Promise<TokenDat
   };
 
   // Persist the new tokens
-  await saveTokensToFile(tokens);
+  await saveTokens(tokens);
 
   return tokens;
 }
@@ -79,8 +130,8 @@ export async function getYahooAccessToken(): Promise<string> {
     return cachedToken.accessToken;
   }
 
-  // Try loading from file
-  const storedTokens = await loadTokensFromFile();
+  // Try loading from storage
+  const storedTokens = await loadTokens();
 
   if (storedTokens) {
     // Check if access token is still valid
@@ -94,7 +145,11 @@ export async function getYahooAccessToken(): Promise<string> {
     return cachedToken.accessToken;
   }
 
-  throw new Error("No Yahoo tokens found. Run 'pnpm run setup-yahoo' to authenticate with Yahoo.");
+  throw new Error(
+    isProduction()
+      ? "No Yahoo tokens found in Redis. Please set up tokens using the setup endpoint."
+      : "No Yahoo tokens found. Run 'pnpm run setup-yahoo' to authenticate with Yahoo.",
+  );
 }
 
 /**
@@ -136,7 +191,15 @@ export async function exchangeCodeForTokens(code: string, redirectUri: string): 
     expiresAt: Date.now() + data.expires_in * 1000,
   };
 
-  await saveTokensToFile(tokens);
+  await saveTokens(tokens);
 
   return tokens;
+}
+
+/**
+ * Manually set tokens (useful for initial setup in production)
+ */
+export async function setTokens(tokens: TokenData): Promise<void> {
+  await saveTokens(tokens);
+  cachedToken = tokens;
 }
