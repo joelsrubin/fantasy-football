@@ -13,7 +13,8 @@
     "check:fix": "biome check --write .",
     "setup-yahoo": "tsx scripts/setup-yahoo.ts",
     "debug-yahoo": "tsx scripts/debug-yahoo.ts",
-    "debug-standings": "tsx scripts/debug-standings.ts"
+    "debug-standings": "tsx scripts/debug-standings.ts",
+    "aggregate-stats": "tsx scripts/aggregate-stats.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.11",

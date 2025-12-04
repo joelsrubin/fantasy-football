@@ -46,3 +46,6 @@ next-env.d.ts
 .yahoo-tokens.json
 
 .vscode
+
+# Auto-generated types
+/types/

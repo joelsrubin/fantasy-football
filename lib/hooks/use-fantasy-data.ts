@@ -88,6 +88,31 @@ async function fetchTeamRoster(
   return data.roster;
 }
 
+export interface RankingEntry {
+  rank: number;
+  name: string;
+  nickname: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  winPct: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDiff: number;
+  seasonsPlayed: number;
+  championships: number;
+  seasons: string[];
+}
+
+async function fetchRankings(): Promise<RankingEntry[]> {
+  const response = await fetch("/api/rankings");
+  if (!response.ok) {
+    throw new Error("Failed to fetch rankings");
+  }
+  const data = await response.json();
+  return data.rankings;
+}
+
 // Hooks
 export function useMyLeagues() {
   return useQuery({
@@ -131,6 +156,14 @@ export function useTeamRoster(leagueKey: string, teamId: string, week?: number) 
     // Require week to be set - important for prior year leagues
     enabled: !!leagueKey && !!teamId && week !== undefined,
     staleTime: 60 * 1000, // 1 minute
+  });
+}
+
+export function useRankings() {
+  return useQuery({
+    queryKey: ["rankings"],
+    queryFn: fetchRankings,
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours - this data only changes when we run aggregate script
   });
 }
 
