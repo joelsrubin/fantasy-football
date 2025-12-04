@@ -14,9 +14,30 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fantasy Football League Stats",
-  description: "View Yahoo Fantasy Football league stats, standings, and matchups",
-  
+  title: "Bodega Bottle Service HQ",
+  description: "The home for historical stats",
+  icons: {
+    icon: "https://fav.farm/🏈",
+  },
+  openGraph: {
+    title: "Bodega Bottle Service HQ",
+    description: "The home for historical stats",
+    type: "website",
+    images: [
+      {
+        url: "https://fav.farm/🏈?size=512",
+        width: 512,
+        height: 512,
+        alt: "Fantasy Football",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Bodega Bottle Service HQ",
+    description: "The home for historical stats",
+    images: ["https://fav.farm/🏈?size=512"],
+  },
 };
 
 export default function RootLayout({
@@ -26,7 +47,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <link rel="icon" href="https://fav.farm/🏈" />
       <body
         className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} min-h-screen bg-zinc-950 font-sans antialiased`}
       >
