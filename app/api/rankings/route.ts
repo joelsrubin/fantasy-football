@@ -38,7 +38,7 @@ export async function GET() {
     await client.connect();
 
     const data = await client.get(REDIS_KEY);
-    await client.disconnect();
+    await client.destroy();
 
     if (!data) {
       return NextResponse.json({

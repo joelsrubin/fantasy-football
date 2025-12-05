@@ -296,9 +296,7 @@ function StandingsTable({
                   </td>
                   {!isMobile && (
                     <>
-                      <td className="px-6 py-4 text-center font-semibold text-emerald-400">
-                        {standing.team_standings?.outcome_totals.wins || 0}
-                      </td>
+                    
                       <td className="px-6 py-4 text-center font-semibold text-red-400">
                         {standing.team_standings?.outcome_totals.losses || 0}
                       </td>

@@ -107,7 +107,7 @@ export async function GET(request: Request) {
     await client.connect();
 
     await client.set(REDIS_KEY, JSON.stringify(rankings));
-    await client.disconnect();
+    await client.destroy();
 
     console.log(`✅ Aggregated stats for ${rankings.length} managers`);
 
