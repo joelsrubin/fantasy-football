@@ -21,6 +21,17 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
   const { data: league, isLoading: leagueLoading, error: leagueError } = useLeague(leagueId);
   const { data: standings, isLoading: standingsLoading } = useStandings(leagueId);
 
+  const getWinLossRecords = () => {
+    return standings?.map((standing) => {
+      return {
+        team: standing.team.name,
+        wins: standing.team_standings?.outcome_totals.wins || 0,
+        losses: standing.team_standings?.outcome_totals.losses || 0,
+      }
+    })
+  }
+  const winLossRecords = getWinLossRecords()
+
   // Set initial week when league loads (only if not already set via URL)
   if (league && selectedWeek === 0) {
     setSelectedWeek(league.current_week);
@@ -179,6 +190,7 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
           league={league ?? null}
           leagueId={leagueId}
           isLoading={scoreboardFetching}
+          winLossRecords={winLossRecords}
         />
       )}
     </div>
@@ -338,6 +350,7 @@ function Scoreboard({
   league,
   leagueId,
   isLoading,
+  winLossRecords,
 }: {
   matchups: YahooMatchup[];
   selectedWeek: number;
@@ -345,6 +358,7 @@ function Scoreboard({
   league: YahooLeague | null;
   leagueId: string;
   isLoading: boolean;
+  winLossRecords: { team: string; wins: number; losses: number }[] | undefined;
 }) {
   if (!league || selectedWeek === 0) return null;
   const isNow = league?.season === new Date().getFullYear().toString();
@@ -426,6 +440,7 @@ function Scoreboard({
               key={`${matchup.week}-${matchup.teams[0]?.team.team_key}-${matchup.teams[1]?.team.team_key}`}
               matchup={matchup}
               leagueId={leagueId}
+              winLossRecords={winLossRecords}
             />
           ))}
         </div>
@@ -434,10 +449,11 @@ function Scoreboard({
   );
 }
 
-function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: string }) {
+function MatchupCard({ matchup, leagueId, winLossRecords }: { matchup: YahooMatchup; leagueId: string; winLossRecords: { team: string; wins: number; losses: number }[] | undefined }) {
   const team1 = matchup.teams[0];
   const team2 = matchup.teams[1];
-
+  const team1WinLoss = winLossRecords?.find((record) => record.team === team1.team.name);
+  const team2WinLoss = winLossRecords?.find((record) => record.team === team2.team.name);
   if (!team1 || !team2) return null;
 
   const score1 = team1.team_points?.total || 0;
@@ -477,8 +493,8 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
               {team1.team.name}
             </div>
             <div className="text-xs text-zinc-500">
-              {team1.team_standings?.outcome_totals.wins || 0}-
-              {team1.team_standings?.outcome_totals.losses || 0}
+              {team1WinLoss?.wins || 0}-
+              {team1WinLoss?.losses || 0}
             </div>
           </div>
           <div
@@ -534,8 +550,8 @@ function MatchupCard({ matchup, leagueId }: { matchup: YahooMatchup; leagueId: s
               {team2.team.name}
             </div>
             <div className="text-xs text-zinc-500">
-              {team2.team_standings?.outcome_totals.wins || 0}-
-              {team2.team_standings?.outcome_totals.losses || 0}
+              {team2WinLoss?.wins || 0}-
+              {team2WinLoss?.losses || 0}
             </div>
           </div>
           <div
