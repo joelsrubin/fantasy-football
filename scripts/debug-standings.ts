@@ -3,15 +3,29 @@
  * Run with: pnpm run debug-standings
  */
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { config } from "dotenv";
+import { createClient } from "redis";
 
 config({ path: ".env.local" });
 
 async function main() {
-  // Load tokens
-  const tokensData = await readFile(join(process.cwd(), ".yahoo-tokens.json"), "utf-8");
+  const REDIS_URL = process.env.REDIS_URL;
+  if (!REDIS_URL) {
+    console.error("❌ REDIS_URL not set in .env.local\n");
+    process.exit(1);
+  }
+
+  // Load tokens from Redis
+  const redis = createClient({ url: REDIS_URL });
+  await redis.connect();
+  const tokensData = await redis.get("yahoo-tokens");
+  await redis.disconnect();
+
+  if (!tokensData) {
+    console.error("❌ No tokens found in Redis. Run 'pnpm run setup-yahoo' first.\n");
+    process.exit(1);
+  }
+
   const tokens = JSON.parse(tokensData);
 
   console.log("\n🔍 Fetching standings for 461.l.66782...\n");

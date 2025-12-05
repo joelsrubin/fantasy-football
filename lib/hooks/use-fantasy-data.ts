@@ -92,6 +92,7 @@ export interface RankingEntry {
   rank: number;
   name: string;
   nickname: string;
+  guid: string;
   wins: number;
   losses: number;
   ties: number;

@@ -3,25 +3,31 @@
  * Run with: pnpm run setup-yahoo
  *
  * This opens a browser for you to authorize the app,
- * then you paste the code back here.
+ * then saves the tokens to Redis.
  */
 
 import { exec } from "node:child_process";
-import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { config } from "dotenv";
+import { createClient } from "redis";
 
 // Load environment variables from .env.local
 config({ path: ".env.local" });
 
 const CLIENT_ID = process.env.YAHOO_CLIENT_ID;
 const CLIENT_SECRET = process.env.YAHOO_CLIENT_SECRET;
+const REDIS_URL = process.env.REDIS_URL;
 const REDIRECT_URI = "https://localhost:3000/callback";
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error("\n❌ Missing environment variables!");
   console.error("Please set YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET in your .env.local file\n");
+  process.exit(1);
+}
+
+if (!REDIS_URL) {
+  console.error("\n❌ Missing REDIS_URL!");
+  console.error("Please set REDIS_URL in your .env.local file\n");
   process.exit(1);
 }
 
@@ -92,10 +98,15 @@ rl.question("Paste the code here: ", async (code) => {
       expiresAt: Date.now() + data.expires_in * 1000,
     };
 
-    await writeFile(join(process.cwd(), ".yahoo-tokens.json"), JSON.stringify(tokens, null, 2));
+    // Save to Redis
+    console.log("⏳ Saving tokens to Redis...");
+    const redis = createClient({ url: REDIS_URL });
+    await redis.connect();
+    await redis.set("yahoo-tokens", JSON.stringify(tokens));
+    await redis.disconnect();
 
     console.log("\n✅ Authorization successful!");
-    console.log("📁 Tokens saved to .yahoo-tokens.json");
+    console.log("📁 Tokens saved to Redis");
     console.log("\n🚀 You can now run: pnpm dev\n");
 
     process.exit(0);

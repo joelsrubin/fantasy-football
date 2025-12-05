@@ -1,11 +1,11 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createClient } from "redis";
 import { NextResponse } from "next/server";
 
 export interface RankingEntry {
   rank: number;
   name: string;
   nickname: string;
+  guid: string;
   wins: number;
   losses: number;
   ties: number;
@@ -18,78 +18,49 @@ export interface RankingEntry {
   seasons: string[];
 }
 
-// Cache for 1 day - this data only changes when we run the aggregate script
-export const revalidate = 86400;
+const REDIS_KEY = "all-time-rankings";
+
+// Cache for 5 minutes - data updates weekly via cron
+export const revalidate = 300;
 
 export async function GET() {
   try {
-    const csvPath = join(process.cwd(), "data", "all-time-stats.csv");
-    const csvContent = await readFile(csvPath, "utf-8");
+    const redisUrl = process.env.REDIS_URL;
 
-    const lines = csvContent.trim().split("\n");
-    const rankings: RankingEntry[] = [];
-
-    // Skip header row
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      // Parse CSV (handling quoted fields)
-      const fields = parseCSVLine(line);
-
-      if (fields.length >= 12) {
-        rankings.push({
-          rank: 0, // Will be assigned after sorting
-          name: fields[0],
-          nickname: fields[1],
-          wins: parseInt(fields[2], 10),
-          losses: parseInt(fields[3], 10),
-          ties: parseInt(fields[4], 10),
-          winPct: parseFloat(fields[5].replace("%", "")),
-          pointsFor: parseFloat(fields[6]),
-          pointsAgainst: parseFloat(fields[7]),
-          pointDiff: parseFloat(fields[8]),
-          seasonsPlayed: parseInt(fields[9], 10),
-          championships: parseInt(fields[10], 10),
-          seasons: fields[11].split(", ").map((s) => s.trim()),
-        });
-      }
+    if (!redisUrl) {
+      return NextResponse.json(
+        { rankings: [], error: "Redis not configured" },
+        { status: 500 },
+      );
     }
 
-    // Sort by win percentage (descending), then by total wins as tiebreaker
-    rankings.sort((a, b) => {
-      if (b.winPct !== a.winPct) return b.winPct - a.winPct;
-      return b.wins - a.wins;
-    });
+    const client = createClient({ url: redisUrl });
+    await client.connect();
 
-    // Assign ranks after sorting
-    rankings.forEach((entry, index) => {
-      entry.rank = index + 1;
-    });
+    const data = await client.get(REDIS_KEY);
+    await client.disconnect();
+
+    if (!data) {
+      return NextResponse.json({
+        rankings: [],
+        error: "No rankings data available. Run the aggregation cron job first.",
+      });
+    }
+
+    const rawRankings = JSON.parse(data) as Omit<RankingEntry, "rank">[];
+
+    // Add rank numbers (data is already sorted by winPct)
+    const rankings: RankingEntry[] = rawRankings.map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
 
     return NextResponse.json({ rankings });
   } catch (error) {
-    console.error("Error reading rankings:", error);
-    return NextResponse.json({ rankings: [], error: "Rankings data not available" });
+    console.error("Error reading rankings from Redis:", error);
+    return NextResponse.json(
+      { rankings: [], error: "Failed to fetch rankings" },
+      { status: 500 },
+    );
   }
-}
-
-function parseCSVLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
-      fields.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  fields.push(current);
-  return fields;
 }

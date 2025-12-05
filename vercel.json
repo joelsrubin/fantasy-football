@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/aggregate-stats",
+      "schedule": "0 9 * * 2"
+    }
+  ]
+}
+

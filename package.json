@@ -14,7 +14,7 @@
     "setup-yahoo": "tsx scripts/setup-yahoo.ts",
     "debug-yahoo": "tsx scripts/debug-yahoo.ts",
     "debug-standings": "tsx scripts/debug-standings.ts",
-    "aggregate-stats": "tsx scripts/aggregate-stats.ts"
+    "seed-rankings": "tsx scripts/seed-rankings.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.11",

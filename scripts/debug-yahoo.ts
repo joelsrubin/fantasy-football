@@ -3,9 +3,8 @@
  * Run with: pnpm run debug-yahoo
  */
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { config } from "dotenv";
+import { createClient } from "redis";
 import type { TokenData } from "@/lib/yahoo-auth";
 
 config({ path: ".env.local" });
@@ -13,16 +12,31 @@ config({ path: ".env.local" });
 async function main() {
   console.log("\n🔍 Debugging Yahoo API Access\n");
 
-  // Load tokens
+  const REDIS_URL = process.env.REDIS_URL;
+  if (!REDIS_URL) {
+    console.error("❌ REDIS_URL not set in .env.local\n");
+    process.exit(1);
+  }
+
+  // Load tokens from Redis
   let tokens: TokenData | null = null;
   try {
-    const data = await readFile(join(process.cwd(), ".yahoo-tokens.json"), "utf-8");
+    const redis = createClient({ url: REDIS_URL });
+    await redis.connect();
+    const data = await redis.get("yahoo-tokens");
+    await redis.disconnect();
+
+    if (!data) {
+      console.error("❌ No tokens found in Redis. Run 'pnpm run setup-yahoo' first.\n");
+      process.exit(1);
+    }
+
     tokens = JSON.parse(data);
-    console.log("✅ Tokens file found");
+    console.log("✅ Tokens found in Redis");
     console.log(`   Access token expires: ${new Date(tokens?.expiresAt || 0).toLocaleString()}`);
     console.log(`   Token expired: ${Date.now() > (tokens?.expiresAt || 0) ? "YES ⚠️" : "NO ✓"}\n`);
-  } catch {
-    console.error("❌ No tokens file found. Run 'pnpm run setup-yahoo' first.\n");
+  } catch (error) {
+    console.error("❌ Failed to load tokens from Redis:", error);
     process.exit(1);
   }
 
