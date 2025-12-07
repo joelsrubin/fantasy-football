@@ -34,7 +34,7 @@ export default function TeamPage({
   // Use nuqs for URL-synced week state, defaulting to league's current week
   const [selectedWeek, setSelectedWeek] = useQueryState(
     "week",
-    parseAsInteger.withDefault(league?.current_week ?? 1),
+    parseAsInteger.withDefault(league?.currentWeek ?? 1),
   );
 
   // Only fetch roster once we have league data (so we know the default week)
@@ -162,10 +162,8 @@ export default function TeamPage({
             </div>
             <button
               type="button"
-              onClick={() =>
-                setSelectedWeek(Math.min(Number.parseInt(league.end_week, 10), selectedWeek + 1))
-              }
-              disabled={selectedWeek === Number.parseInt(league.end_week, 10)}
+              onClick={() => setSelectedWeek(Math.min(league.endWeek ?? 17, selectedWeek + 1))}
+              disabled={selectedWeek === league.endWeek}
               className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
             >
               <svg
@@ -204,7 +202,7 @@ export default function TeamPage({
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
             <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Starting Lineup</h2>
-              {selectedWeek === league?.current_week && isNow && (
+              {selectedWeek === league?.currentWeek && isNow && (
                 <span className="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
                   Current
                 </span>

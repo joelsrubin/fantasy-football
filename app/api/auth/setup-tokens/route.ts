@@ -3,10 +3,10 @@ import { setTokens, type TokenData } from "@/lib/yahoo-auth";
 
 /**
  * POST /api/auth/setup-tokens
- * 
- * Sets up Yahoo tokens in Redis.
+ *
+ * Sets up Yahoo tokens in Vercel KV (production only).
  * Requires a secret key to prevent unauthorized access.
- * 
+ *
  * Body: { accessToken, refreshToken, expiresAt, secret }
  */
 export async function POST(request: Request) {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
     await setTokens(tokens);
 
-    return NextResponse.json({ success: true, message: "Tokens saved to Redis" });
+    return NextResponse.json({ success: true, message: "Tokens saved to KV" });
   } catch (error) {
     console.error("Error setting up tokens:", error);
     return NextResponse.json(
@@ -44,4 +44,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

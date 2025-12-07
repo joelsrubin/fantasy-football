@@ -1,5 +1,7 @@
+import { desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getYahooAccessToken } from "@/lib/yahoo-auth";
+import { db } from "@/db/db";
+import * as schema from "@/db/schema";
 
 export interface LeagueInfo {
   leagueKey: string;
@@ -9,8 +11,8 @@ export interface LeagueInfo {
   gameKey: string;
   numTeams: number;
   currentWeek: number;
-  url: string;
-  logoUrl?: string;
+  url: string | null;
+  logoUrl: string | null;
 }
 
 export interface SeasonData {
@@ -19,85 +21,45 @@ export interface SeasonData {
   leagues: LeagueInfo[];
 }
 
-// Revalidate every 5 minutes
+// Cache for 5 minutes
 export const revalidate = 300;
 
 export async function GET() {
   try {
-    const accessToken = await getYahooAccessToken();
+    // Fetch all leagues from database, ordered by season desc
+    const leagues = await db.select().from(schema.leagues).orderBy(desc(schema.leagues.season));
 
-    const response = await fetch(
-      "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_codes=nfl/leagues?format=json",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
-        },
-        next: { revalidate: 300, tags: ["yahoo-api", "my-leagues"] },
-      },
-    );
+    // Group by season
+    const seasonMap = new Map<string, SeasonData>();
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Yahoo API Error: ${errorText}`);
-    }
+    for (const league of leagues) {
+      const existing = seasonMap.get(league.season);
 
-    const data = await response.json();
+      const leagueInfo: LeagueInfo = {
+        leagueKey: league.leagueKey,
+        leagueId: league.leagueId,
+        name: league.name,
+        season: league.season,
+        gameKey: league.gameKey,
+        numTeams: league.numTeams,
+        currentWeek: league.currentWeek || 1,
+        url: league.url,
+        logoUrl: league.logoUrl,
+      };
 
-    // Parse the response
-    const seasons: SeasonData[] = [];
-
-    const users = data.fantasy_content?.users;
-    const user = users?.["0"]?.user;
-
-    if (!user) {
-      return NextResponse.json({ seasons: [] });
-    }
-
-    const games = user[1]?.games;
-    const gamesCount = games?.count || 0;
-
-    for (let i = 0; i < gamesCount; i++) {
-      const game = games[i.toString()]?.game;
-      if (!game) continue;
-
-      const gameInfo = game[0];
-      const leaguesData = game[1]?.leagues;
-      const leaguesCount = leaguesData?.count || 0;
-
-      const leagues: LeagueInfo[] = [];
-
-      for (let j = 0; j < leaguesCount; j++) {
-        const league = leaguesData[j.toString()]?.league?.[0];
-        if (!league) continue;
-
-        // Skip leagues that haven't drafted yet
-        if (league.draft_status === "predraft") continue;
-
-        leagues.push({
-          leagueKey: league.league_key,
-          leagueId: league.league_id,
-          name: league.name,
-          season: gameInfo.season,
-          gameKey: gameInfo.game_key,
-          numTeams: league.num_teams,
-          currentWeek: parseInt(league.current_week, 10),
-          url: league.url,
-          logoUrl: league.logo_url,
-        });
-      }
-
-      if (leagues.length > 0) {
-        seasons.push({
-          season: gameInfo.season,
-          gameKey: gameInfo.game_key,
-          leagues,
+      if (existing) {
+        existing.leagues.push(leagueInfo);
+      } else {
+        seasonMap.set(league.season, {
+          season: league.season,
+          gameKey: league.gameKey,
+          leagues: [leagueInfo],
         });
       }
     }
 
-    // Sort seasons descending (newest first)
-    seasons.sort((a, b) => parseInt(b.season, 10) - parseInt(a.season, 10));
+    // Convert to array (already sorted by Map insertion order from desc query)
+    const seasons = Array.from(seasonMap.values());
 
     return NextResponse.json({ seasons });
   } catch (error) {

@@ -1,7 +1,8 @@
+import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getYahooAccessToken } from "@/lib/yahoo-auth";
-import { createYahooFantasyAPI } from "@/lib/yahoo-fantasy";
+import { db } from "@/db/db";
+import * as schema from "@/db/schema";
 
 const ONE_YEAR = 31536000;
 const CURRENT_SEASON = new Date().getFullYear();
@@ -13,25 +14,39 @@ export async function GET(
   const { leagueId } = await params;
 
   try {
-    const accessToken = await getYahooAccessToken();
-    const api = createYahooFantasyAPI(accessToken);
+    // leagueId can be full key (449.l.123456) or just the key
+    const leagueKey = decodeURIComponent(leagueId);
 
-    // leagueId can be full key (449.l.123456) or just ID (123456)
-    // If just ID, default to current season (461)
-    const leagueKey = leagueId.includes(".l.") ? decodeURIComponent(leagueId) : `461.l.${leagueId}`;
-
-    const league = await api.getLeague(leagueKey);
+    const [league] = await db
+      .select()
+      .from(schema.leagues)
+      .where(eq(schema.leagues.leagueKey, leagueKey))
+      .limit(1);
 
     if (!league) {
       return NextResponse.json({ error: "League not found" }, { status: 404 });
     }
 
     // Cache historical data for 1 year, current season for 5 minutes
-    const isHistorical = parseInt(league.season) < CURRENT_SEASON;
+    const isHistorical = parseInt(league.season, 10) < CURRENT_SEASON;
     const maxAge = isHistorical ? ONE_YEAR : 300;
 
     return NextResponse.json(
-      { league },
+      {
+        league: {
+          leagueKey: league.leagueKey,
+          leagueId: league.leagueId,
+          name: league.name,
+          season: league.season,
+          numTeams: league.numTeams,
+          currentWeek: league.currentWeek,
+          startWeek: league.startWeek,
+          endWeek: league.endWeek,
+          isFinished: league.isFinished,
+          url: league.url,
+          logoUrl: league.logoUrl,
+        },
+      },
       {
         headers: {
           "Cache-Control": `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`,

@@ -1,10 +1,11 @@
+import { asc, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getYahooAccessToken } from "@/lib/yahoo-auth";
-import { createYahooFantasyAPI } from "@/lib/yahoo-fantasy";
+import { db } from "@/db/db";
+import * as schema from "@/db/schema";
 
 const ONE_YEAR = 31536000;
-const CURRENT_GAME_ID = "461"; // 2025 season
+const CURRENT_SEASON = new Date().getFullYear();
 
 export async function GET(
   _request: NextRequest,
@@ -13,16 +14,56 @@ export async function GET(
   const { leagueId } = await params;
 
   try {
-    const accessToken = await getYahooAccessToken();
-    const api = createYahooFantasyAPI(accessToken);
+    const leagueKey = decodeURIComponent(leagueId);
 
-    const leagueKey = leagueId.includes(".l.") ? decodeURIComponent(leagueId) : `461.l.${leagueId}`;
-    const gameId = leagueKey.split(".")[0];
-    const isHistorical = gameId !== CURRENT_GAME_ID;
+    // First get the league to check season and get its ID
+    const [league] = await db
+      .select()
+      .from(schema.leagues)
+      .where(eq(schema.leagues.leagueKey, leagueKey))
+      .limit(1);
 
-    const standings = await api.getLeagueStandings(leagueKey);
+    if (!league) {
+      return NextResponse.json({ error: "League not found" }, { status: 404 });
+    }
+
+    // Get teams with manager info for this league
+    const teamsWithManagers = await db
+      .select({
+        team: schema.teams,
+        manager: schema.managers,
+      })
+      .from(schema.teams)
+      .innerJoin(schema.managers, eq(schema.teams.managerId, schema.managers.id))
+      .where(eq(schema.teams.leagueId, league.id))
+      .orderBy(asc(schema.teams.rank));
+
+    // Format standings response
+    const standings = teamsWithManagers.map(({ team, manager }) => ({
+      teamKey: team.teamKey,
+      teamId: team.teamId,
+      name: team.name,
+      logoUrl: team.logoUrl,
+      url: team.url,
+      manager: {
+        guid: manager.guid,
+        nickname: manager.nickname,
+        imageUrl: manager.imageUrl,
+      },
+      standings: {
+        rank: team.rank,
+        wins: team.wins,
+        losses: team.losses,
+        ties: team.ties,
+        winPct: team.winPct,
+        pointsFor: team.pointsFor,
+        pointsAgainst: team.pointsAgainst,
+        playoffSeed: team.playoffSeed,
+      },
+    }));
 
     // Cache historical data for 1 year, current season for 2 minutes
+    const isHistorical = parseInt(league.season, 10) < CURRENT_SEASON;
     const maxAge = isHistorical ? ONE_YEAR : 120;
 
     return NextResponse.json(

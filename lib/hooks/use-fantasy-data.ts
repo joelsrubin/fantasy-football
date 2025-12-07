@@ -1,30 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type {
-  YahooLeague,
-  YahooMatchup,
-  YahooRosterPlayer,
-  YahooTeamStandings,
-} from "@/lib/yahoo-fantasy";
-
-// Types for API responses
-interface LeagueInfo {
-  leagueKey: string;
-  leagueId: string;
-  name: string;
-  season: string;
-  gameKey: string;
-  numTeams: number;
-  currentWeek: number;
-  url: string;
-  logoUrl?: string;
-}
+import type { League } from "@/db/schema";
+import type { YahooRosterPlayer } from "@/lib/yahoo-fantasy";
 
 interface SeasonData {
   season: string;
   gameKey: string;
-  leagues: LeagueInfo[];
+  leagues: League[];
 }
 
 // Fetch functions
@@ -38,7 +21,7 @@ async function fetchMyLeagues(): Promise<SeasonData[]> {
   return data.seasons;
 }
 
-async function fetchLeague(leagueKey: string): Promise<YahooLeague> {
+async function fetchLeague(leagueKey: string): Promise<League> {
   const response = await fetch(`/api/fantasy/league/${encodeURIComponent(leagueKey)}`);
   if (!response.ok) {
     const data = await response.json();
@@ -48,7 +31,31 @@ async function fetchLeague(leagueKey: string): Promise<YahooLeague> {
   return data.league;
 }
 
-async function fetchStandings(leagueKey: string): Promise<YahooTeamStandings[]> {
+// New DB-backed standings format
+export interface StandingEntry {
+  teamKey: string;
+  teamId: string;
+  name: string;
+  logoUrl: string | null;
+  url: string | null;
+  manager: {
+    guid: string;
+    nickname: string;
+    imageUrl: string | null;
+  };
+  standings: {
+    rank: number | null;
+    wins: number;
+    losses: number;
+    ties: number;
+    winPct: number;
+    pointsFor: number;
+    pointsAgainst: number;
+    playoffSeed: number | null;
+  };
+}
+
+async function fetchStandings(leagueKey: string): Promise<StandingEntry[]> {
   const response = await fetch(`/api/fantasy/league/${encodeURIComponent(leagueKey)}/standings`);
   if (!response.ok) {
     const data = await response.json();
@@ -58,10 +65,30 @@ async function fetchStandings(leagueKey: string): Promise<YahooTeamStandings[]> 
   return data.standings;
 }
 
-async function fetchScoreboard(leagueKey: string, week?: number): Promise<YahooMatchup[]> {
-  const url = week
-    ? `/api/fantasy/league/${encodeURIComponent(leagueKey)}/scoreboard?week=${week}`
-    : `/api/fantasy/league/${encodeURIComponent(leagueKey)}/scoreboard`;
+// New DB-backed matchup format
+export interface MatchupTeam {
+  teamKey: string;
+  teamId: string;
+  name: string;
+  logoUrl: string | null;
+  points: number | null;
+  isWinner: boolean;
+  manager: {
+    guid: string;
+    nickname: string;
+    imageUrl: string | null;
+  } | null;
+}
+
+export interface MatchupEntry {
+  week: number;
+  isPlayoff: boolean;
+  isTie: boolean;
+  teams: MatchupTeam[];
+}
+
+async function fetchScoreboard(leagueKey: string, week: number): Promise<MatchupEntry[]> {
+  const url = `/api/fantasy/league/${encodeURIComponent(leagueKey)}/scoreboard?week=${week}`;
   const response = await fetch(url);
   if (!response.ok) {
     const data = await response.json();
@@ -86,6 +113,20 @@ async function fetchTeamRoster(
   }
   const data = await response.json();
   return data.roster;
+}
+
+async function fetchFunFacts(): Promise<{
+  closestMatchup: MatchupEntry;
+  biggestBlowout: MatchupEntry;
+}> {
+  const response = await fetch("/api/fun-facts");
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || "Failed to fetch fun facts");
+  }
+  const data = await response.json();
+
+  return data as { closestMatchup: MatchupEntry; biggestBlowout: MatchupEntry };
 }
 
 export interface RankingEntry {
@@ -144,8 +185,9 @@ export function useStandings(leagueKey: string) {
 export function useScoreboard(leagueKey: string, week?: number) {
   return useQuery({
     queryKey: ["scoreboard", leagueKey, week],
-    queryFn: () => fetchScoreboard(leagueKey, week),
-    enabled: !!leagueKey,
+    queryFn: () => fetchScoreboard(leagueKey, week!),
+    // Only fetch when we have a valid week number
+    enabled: !!leagueKey && week !== undefined && week > 0 && !Number.isNaN(week),
     staleTime: 60 * 1000, // 1 minute
   });
 }
@@ -168,5 +210,13 @@ export function useRankings() {
   });
 }
 
+export function useFunFacts() {
+  return useQuery({
+    queryKey: ["fun-facts"],
+    queryFn: fetchFunFacts,
+    staleTime: 60 * 1000, // 1 minute
+  });
+}
+
 // Re-export types
-export type { LeagueInfo, SeasonData };
+export type { SeasonData };

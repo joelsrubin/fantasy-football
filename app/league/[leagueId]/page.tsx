@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { use } from "react";
-import { useLeague, useScoreboard, useStandings } from "@/lib/hooks/use-fantasy-data";
+import { use, useEffect } from "react";
+import type { League } from "@/db/schema";
+import {
+  type StandingEntry,
+  useLeague,
+  useScoreboard,
+  useStandings,
+} from "@/lib/hooks/use-fantasy-data";
 import { useWindowSize } from "@/lib/hooks/use-window.size";
-import type { YahooLeague, YahooMatchup, YahooTeamStandings } from "@/lib/yahoo-fantasy";
 
 const tabs = ["standings", "scoreboard"] as const;
-type Tab = (typeof tabs)[number];
 
 export default function LeaguePage({ params }: { params: Promise<{ leagueId: string }> }) {
   const { leagueId } = use(params);
@@ -21,26 +25,27 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
   const { data: league, isLoading: leagueLoading, error: leagueError } = useLeague(leagueId);
   const { data: standings, isLoading: standingsLoading } = useStandings(leagueId);
 
-  const getWinLossRecords = () => {
-    return standings?.map((standing) => {
-      return {
-        team: standing.team.name,
-        wins: standing.team_standings?.outcome_totals.wins || 0,
-        losses: standing.team_standings?.outcome_totals.losses || 0,
-      }
-    })
-  }
-  const winLossRecords = getWinLossRecords()
+  const winLossRecords = standings?.map((standing) => ({
+    team: standing.name,
+    wins: standing.standings?.wins || 0,
+    losses: standing.standings?.losses || 0,
+  }));
 
   // Set initial week when league loads (only if not already set via URL)
-  if (league && selectedWeek === 0) {
-    setSelectedWeek(league.current_week);
-  }
+  useEffect(() => {
+    if (league && selectedWeek === 0) {
+      setSelectedWeek(league.currentWeek);
+    }
+  }, [league, selectedWeek, setSelectedWeek]);
 
   // Use the effective week for scoreboard (fallback to league's current week)
-  const effectiveWeek = selectedWeek || league?.current_week;
-  const { data: matchups, isFetching: scoreboardFetching } = useScoreboard(leagueId, effectiveWeek);
+  const effectiveWeek = selectedWeek || league?.currentWeek;
 
+  // Only fetch scoreboard when we have a valid week
+  const { data: matchups, isFetching: scoreboardFetching } = useScoreboard(
+    leagueId,
+    effectiveWeek && effectiveWeek > 0 ? effectiveWeek : undefined,
+  );
   if (leagueLoading || standingsLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
@@ -127,14 +132,31 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
       {league && (
         <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
           <div className="flex flex-wrap items-center gap-6">
-            {league.logo_url && (
+            {league.logoUrl && league.logoUrl !== "0" ? (
               <picture>
                 <img
-                  src={league.logo_url}
+                  src={league.logoUrl}
                   alt={league.name}
                   className="h-20 w-20 rounded-2xl bg-zinc-800 object-cover"
                 />
               </picture>
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-linear-to-br from-violet-500/20 to-fuchsia-500/20">
+                <svg
+                  className="h-7 w-7 text-violet-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
             )}
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-white">{league.name}</h1>
@@ -142,11 +164,9 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
                 <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-400">
                   {league.season} Season
                 </span>
-                <span>{league.num_teams} Teams</span>
+                <span>{league.numTeams} Teams</span>
                 <span>•</span>
-                <span>{league.scoring_type}</span>
-                <span>•</span>
-                <span>Week {league.current_week}</span>
+                <span>Week {league.currentWeek}</span>
               </div>
             </div>
           </div>
@@ -185,7 +205,7 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
       ) : (
         <Scoreboard
           matchups={matchups ?? []}
-          selectedWeek={selectedWeek}
+          selectedWeek={effectiveWeek ?? 1}
           setSelectedWeek={setSelectedWeek}
           league={league ?? null}
           leagueId={leagueId}
@@ -197,13 +217,9 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
   );
 }
 
-function StandingsTable({
-  standings,
-  leagueId,
-}: {
-  standings: YahooTeamStandings[];
-  leagueId: string;
-}) {
+function StandingsTable({ standings, leagueId }: { standings: StandingEntry[]; leagueId: string }) {
+  const { isMobile } = useWindowSize();
+
   if (standings.length === 0) {
     return (
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 text-center text-zinc-400">
@@ -211,8 +227,6 @@ function StandingsTable({
       </div>
     );
   }
-
-  const { isMobile } = useWindowSize();
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
@@ -240,15 +254,14 @@ function StandingsTable({
           </thead>
           <tbody className="divide-y divide-zinc-800/50">
             {standings.map((standing, index) => {
-              const rank = standing.team_standings?.rank || index + 1;
+              const rank = standing.standings?.rank || index + 1;
               const isPlayoff = rank <= 6;
               const pointsDiff =
-                (standing.team_standings?.points_for || 0) -
-                (standing.team_standings?.points_against || 0);
+                (standing.standings?.pointsFor || 0) - (standing.standings?.pointsAgainst || 0);
 
               return (
-                <tr key={standing.team.team_key} className="transition-colors hover:bg-zinc-800/30">
-                  <td className="px-6 py-4">
+                <tr key={standing.teamKey} className="transition-colors hover:bg-zinc-800/30">
+                  <td className="px-4 py-4">
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
                         rank === 1
@@ -267,53 +280,49 @@ function StandingsTable({
                   </td>
                   <td className="max-w-[200px] px-6 py-4 sm:max-w-[300px]">
                     <Link
-                      href={`/league/${leagueId}/team/${standing.team.team_id}`}
+                      href={`/league/${leagueId}/team/${standing.teamId}`}
                       className="group flex items-center gap-3"
                     >
-                      {standing.team.team_logos?.[0]?.url && (
+                      {standing.logoUrl && (
                         <picture>
                           <img
-                            src={standing.team.team_logos[0].url}
-                            alt={standing.team.name}
+                            src={standing.logoUrl}
+                            alt={standing.name}
                             className="h-10 min-w-10 w-10 shrink-0 rounded-lg bg-zinc-800 object-cover"
                           />
                         </picture>
                       )}
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-white group-hover:text-violet-400 transition-colors">
-                          {standing.team.name}
+                          {standing.name}
                         </div>
-                        {standing.team.managers?.[0]?.nickname && (
+                        {standing.manager?.nickname && (
                           <div className="truncate text-xs text-zinc-500">
-                            {standing.team.managers[0].nickname}
+                            {standing.manager.nickname}
                           </div>
                         )}
                       </div>
                     </Link>
                   </td>
                   <td className="px-6 py-4 text-center font-semibold text-emerald-400">
-                    {standing.team_standings?.outcome_totals.wins || 0}
+                    {standing.standings?.wins || 0}
                   </td>
                   {!isMobile && (
                     <>
-                    
                       <td className="px-6 py-4 text-center font-semibold text-red-400">
-                        {standing.team_standings?.outcome_totals.losses || 0}
+                        {standing.standings?.losses || 0}
                       </td>
                       <td className="px-6 py-4 text-center font-semibold text-zinc-500">
-                        {standing.team_standings?.outcome_totals.ties || 0}
+                        {standing.standings?.ties || 0}
                       </td>
                       <td className="px-6 py-4 text-right font-mono text-sm text-zinc-300">
-                        {((standing.team_standings?.outcome_totals.percentage || 0) * 100).toFixed(
-                          0,
-                        )}
-                        %
+                        {((standing.standings?.winPct || 0) * 100).toFixed(0)}%
                       </td>
                       <td className="px-6 py-4 text-right font-semibold text-white">
-                        {standing.team_standings?.points_for?.toFixed(1) || "0.0"}
+                        {standing.standings?.pointsFor?.toFixed(1) || "0.0"}
                       </td>
                       <td className="px-6 py-4 text-right font-semibold text-zinc-400">
-                        {standing.team_standings?.points_against?.toFixed(1) || "0.0"}
+                        {standing.standings?.pointsAgainst?.toFixed(1) || "0.0"}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span
@@ -341,6 +350,28 @@ function StandingsTable({
   );
 }
 
+// New DB-backed matchup format
+interface MatchupTeam {
+  teamKey: string;
+  teamId: string;
+  name: string;
+  logoUrl: string | null;
+  points: number | null;
+  isWinner: boolean;
+  manager: {
+    guid: string;
+    nickname: string;
+    imageUrl: string | null;
+  } | null;
+}
+
+interface MatchupEntry {
+  week: number;
+  isPlayoff: boolean;
+  isTie: boolean;
+  teams: MatchupTeam[];
+}
+
 function Scoreboard({
   matchups,
   selectedWeek,
@@ -350,27 +381,26 @@ function Scoreboard({
   isLoading,
   winLossRecords,
 }: {
-  matchups: YahooMatchup[];
+  matchups: MatchupEntry[];
   selectedWeek: number;
   setSelectedWeek: (week: number) => void;
-  league: YahooLeague | null;
+  league: League | null;
   leagueId: string;
   isLoading: boolean;
   winLossRecords: { team: string; wins: number; losses: number }[] | undefined;
 }) {
   if (!league || selectedWeek === 0) return null;
   const isNow = league?.season === new Date().getFullYear().toString();
-
+  const isCurrentWeek = selectedWeek === league?.currentWeek;
   return (
     <div className="space-y-6">
       {/* Week Selector */}
-
       <div className="flex items-center gap-4 mx-auto">
         <div className="flex self-start gap-4">
           <button
             type="button"
             onClick={() => setSelectedWeek(Math.max(1, selectedWeek - 1))}
-            disabled={selectedWeek === 1}
+            disabled={selectedWeek <= 1}
             className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
           >
             <svg
@@ -390,16 +420,12 @@ function Scoreboard({
           </button>
 
           <div className="text-center">
-            <span className={`text-2xl font-bold "text-white self-baseline`}>
-              Week {selectedWeek}
-            </span>
+            <span className="text-2xl font-bold text-white">Week {selectedWeek}</span>
           </div>
           <button
             type="button"
-            onClick={() =>
-              setSelectedWeek(Math.min(parseInt(league.end_week, 10), selectedWeek + 1))
-            }
-            disabled={selectedWeek === parseInt(league.end_week, 10)}
+            onClick={() => setSelectedWeek(Math.min(league.endWeek ?? 17, selectedWeek + 1))}
+            disabled={selectedWeek >= (league.endWeek ?? 17)}
             className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
           >
             <svg
@@ -413,7 +439,7 @@ function Scoreboard({
             </svg>
           </button>
         </div>
-        {selectedWeek === league?.current_week && isNow && (
+        {selectedWeek === league?.currentWeek && isNow && (
           <span className="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
             Current
           </span>
@@ -435,10 +461,12 @@ function Scoreboard({
         <div className="grid gap-4 md:grid-cols-2">
           {matchups.map((matchup) => (
             <MatchupCard
-              key={`${matchup.week}-${matchup.teams[0]?.team.team_key}-${matchup.teams[1]?.team.team_key}`}
+              key={`${matchup.week}-${matchup.teams[0]?.teamKey}-${matchup.teams[1]?.teamKey}`}
               matchup={matchup}
               leagueId={leagueId}
               winLossRecords={winLossRecords}
+              isCurrentWeek={isCurrentWeek}
+              league={league}
             />
           ))}
         </div>
@@ -447,22 +475,38 @@ function Scoreboard({
   );
 }
 
-function MatchupCard({ matchup, leagueId, winLossRecords }: { matchup: YahooMatchup; leagueId: string; winLossRecords: { team: string; wins: number; losses: number }[] | undefined }) {
+function MatchupCard({
+  matchup,
+  leagueId,
+  winLossRecords,
+  isCurrentWeek,
+  league,
+}: {
+  matchup: MatchupEntry;
+  leagueId: string;
+  winLossRecords: { team: string; wins: number; losses: number }[] | undefined;
+  isCurrentWeek: boolean;
+  league: League | null;
+}) {
+  const isNow = league?.season === new Date().getFullYear().toString();
+
   const team1 = matchup.teams[0];
   const team2 = matchup.teams[1];
-  const team1WinLoss = winLossRecords?.find((record) => record.team === team1.team.name);
-  const team2WinLoss = winLossRecords?.find((record) => record.team === team2.team.name);
   if (!team1 || !team2) return null;
 
-  const score1 = team1.team_points?.total || 0;
-  const score2 = team2.team_points?.total || 0;
-  const isComplete = matchup.status === "postevent";
-  const team1Wins = isComplete && score1 > score2;
-  const team2Wins = isComplete && score2 > score1;
+  const team1WinLoss = winLossRecords?.find((record) => record.team === team1.name);
+  const team2WinLoss = winLossRecords?.find((record) => record.team === team2.name);
+
+  const score1 = team1.points || 0;
+  const score2 = team2.points || 0;
+  const team1Wins = team1.isWinner;
+  const team2Wins = team2.isWinner;
+
+  const shouldShowCheck = !isNow || (isNow && !isCurrentWeek);
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
-      {matchup.is_playoffs && (
+      {matchup.isPlayoff && (
         <div className="border-b border-zinc-800 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-amber-400">
           Playoffs
         </div>
@@ -470,37 +514,36 @@ function MatchupCard({ matchup, leagueId, winLossRecords }: { matchup: YahooMatc
       <div className="p-4">
         {/* Team 1 */}
         <Link
-          href={`/league/${leagueId}/team/${team1.team.team_id}?week=${matchup.week}&prev=scoreboard`}
+          href={`/league/${leagueId}/team/${team1.teamId}?week=${matchup.week}&prev=scoreboard`}
           className={`group flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-zinc-800/50 ${
-            team1Wins ? "bg-emerald-500/5" : ""
+            team1Wins && shouldShowCheck ? "bg-emerald-500/5" : ""
           }`}
         >
-          {team1.team.team_logos?.[0]?.url && (
+          {team1.logoUrl && (
             <picture>
               <img
-                src={team1.team.team_logos[0].url}
-                alt={team1.team.name}
+                src={team1.logoUrl}
+                alt={team1.name}
                 className="h-12 w-12 shrink-0 rounded-lg bg-zinc-800 object-cover"
               />
             </picture>
           )}
           <div className="flex-1 min-w-0">
             <div
-              className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team1Wins ? "text-emerald-400" : "text-white"}`}
+              className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team1Wins && shouldShowCheck ? "text-emerald-400" : "text-white"}`}
             >
-              {team1.team.name}
+              {team1.name}
             </div>
             <div className="text-xs text-zinc-500">
-              {team1WinLoss?.wins || 0}-
-              {team1WinLoss?.losses || 0}
+              {team1WinLoss?.wins || 0}-{team1WinLoss?.losses || 0}
             </div>
           </div>
           <div
-            className={`shrink-0 text-2xl font-bold ${team1Wins ? "text-emerald-400" : "text-white"}`}
+            className={`shrink-0 text-2xl font-bold ${team1Wins && shouldShowCheck ? "text-emerald-400" : "text-white"}`}
           >
             {score1.toFixed(1)}
           </div>
-          {team1Wins && (
+          {shouldShowCheck && team1Wins && (
             <div className="rounded-full bg-emerald-500/20 p-1">
               <svg
                 className="h-4 w-4 text-emerald-400"
@@ -527,37 +570,36 @@ function MatchupCard({ matchup, leagueId, winLossRecords }: { matchup: YahooMatc
 
         {/* Team 2 */}
         <Link
-          href={`/league/${leagueId}/team/${team2.team.team_id}?week=${matchup.week}&prev=scoreboard`}
+          href={`/league/${leagueId}/team/${team2.teamId}?week=${matchup.week}&prev=scoreboard`}
           className={`group flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-zinc-800/50 ${
-            team2Wins ? "bg-emerald-500/5" : ""
+            team2Wins && shouldShowCheck ? "bg-emerald-500/5" : ""
           }`}
         >
-          {team2.team.team_logos?.[0]?.url && (
+          {team2.logoUrl && (
             <picture>
               <img
-                src={team2.team.team_logos[0].url}
-                alt={team2.team.name}
+                src={team2.logoUrl}
+                alt={team2.name}
                 className="h-12 w-12 shrink-0 rounded-lg bg-zinc-800 object-cover"
               />
             </picture>
           )}
           <div className="flex-1 min-w-0">
             <div
-              className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team2Wins ? "text-emerald-400" : "text-white"}`}
+              className={`font-semibold truncate group-hover:text-violet-400 transition-colors ${team2Wins && shouldShowCheck ? "text-emerald-400" : "text-white"}`}
             >
-              {team2.team.name}
+              {team2.name}
             </div>
             <div className="text-xs text-zinc-500">
-              {team2WinLoss?.wins || 0}-
-              {team2WinLoss?.losses || 0}
+              {team2WinLoss?.wins || 0}-{team2WinLoss?.losses || 0}
             </div>
           </div>
           <div
-            className={`shrink-0 text-2xl font-bold ${team2Wins ? "text-emerald-400" : "text-white"}`}
+            className={`shrink-0 text-2xl font-bold ${team2Wins && shouldShowCheck ? "text-emerald-400" : "text-white"}`}
           >
             {score2.toFixed(1)}
           </div>
-          {team2Wins && (
+          {shouldShowCheck && team2Wins && (
             <div className="rounded-full bg-emerald-500/20 p-1">
               <svg
                 className="h-4 w-4 text-emerald-400"

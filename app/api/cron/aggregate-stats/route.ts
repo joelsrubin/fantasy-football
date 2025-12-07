@@ -1,27 +1,13 @@
-import { createClient } from "redis";
+import { createClient } from "@libsql/client";
+import { eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/libsql";
 import { NextResponse } from "next/server";
+import * as schema from "@/db/schema";
 import { getYahooAccessToken } from "@/lib/yahoo-auth";
 
 const YAHOO_API_BASE = "https://fantasysports.yahooapis.com/fantasy/v2";
-const REDIS_KEY = "all-time-rankings";
 
-export interface RankingEntry {
-  name: string;
-  nickname: string;
-  guid: string;
-  wins: number;
-  losses: number;
-  ties: number;
-  winPct: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  pointDiff: number;
-  seasonsPlayed: number;
-  championships: number;
-  seasons: string[];
-}
-
-// This route is called by Vercel cron
+// This route is called by Vercel cron (weekly during NFL season)
 export async function GET(request: Request) {
   // Verify cron secret in production
   const authHeader = request.headers.get("authorization");
@@ -29,109 +15,207 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  console.log("🏈 Starting stats aggregation...");
+  console.log("🏈 Starting weekly stats update...");
 
   try {
     const accessToken = await getYahooAccessToken();
-    const leagues = await getAllLeagues(accessToken);
+    const db = createDb();
 
-    console.log(`Found ${leagues.length} leagues`);
+    // Only fetch current season leagues
+    const currentSeason = new Date().getFullYear().toString();
+    const leagues = await getCurrentSeasonLeagues(accessToken, currentSeason);
 
-    // Aggregate stats by manager guid
-    const statsMap = new Map<string, RankingEntry>();
+    console.log(`Found ${leagues.length} current season leagues`);
+
+    let teamsUpdated = 0;
+    let matchupsUpdated = 0;
 
     for (const league of leagues) {
-      console.log(`Processing: ${league.name} (${league.season})`);
+      console.log(`Updating: ${league.name}`);
 
       try {
-        const standings = await getLeagueStandings(accessToken, league.leagueKey);
+        // Get existing league from DB
+        const [existingLeague] = await db
+          .select()
+          .from(schema.leagues)
+          .where(eq(schema.leagues.leagueKey, league.leagueKey))
+          .limit(1);
+
+        if (!existingLeague) {
+          console.log(`  League not in DB, skipping (run seed-db first)`);
+          continue;
+        }
+
+        const previousWeek = existingLeague.currentWeek || 1;
+
+        // Update league info
+        await db
+          .update(schema.leagues)
+          .set({
+            currentWeek: league.currentWeek,
+            isFinished: league.isFinished,
+          })
+          .where(eq(schema.leagues.id, existingLeague.id));
+
+        // Fetch and update standings
+        const standings = await fetchStandings(accessToken, league.leagueKey);
+
+        // Build teamKey -> dbId map
+        const teamKeyToId = new Map<string, number>();
+        const existingTeams = await db
+          .select()
+          .from(schema.teams)
+          .where(eq(schema.teams.leagueId, existingLeague.id));
+
+        for (const team of existingTeams) {
+          teamKeyToId.set(team.teamKey, team.id);
+        }
 
         for (const team of standings) {
-          const existing = statsMap.get(team.guid);
-
-          if (existing) {
-            existing.wins += team.wins;
-            existing.losses += team.losses;
-            existing.ties += team.ties;
-            existing.pointsFor += team.pointsFor;
-            existing.pointsAgainst += team.pointsAgainst;
-            existing.seasonsPlayed += 1;
-            if (team.rank === 1) existing.championships += 1;
-            if (!existing.seasons.includes(league.season)) {
-              existing.seasons.push(league.season);
-            }
-            // Recalculate win pct
-            const totalGames = existing.wins + existing.losses + existing.ties;
-            existing.winPct = totalGames > 0 ? (existing.wins / totalGames) * 100 : 0;
-            existing.pointDiff = existing.pointsFor - existing.pointsAgainst;
-          } else {
-            const totalGames = team.wins + team.losses + team.ties;
-            statsMap.set(team.guid, {
-              guid: team.guid,
-              nickname: team.nickname,
-              name: team.nickname, // Use nickname as name (can be mapped later)
+          await db
+            .update(schema.teams)
+            .set({
               wins: team.wins,
               losses: team.losses,
               ties: team.ties,
-              winPct: totalGames > 0 ? (team.wins / totalGames) * 100 : 0,
+              winPct: team.winPct,
               pointsFor: team.pointsFor,
               pointsAgainst: team.pointsAgainst,
-              pointDiff: team.pointsFor - team.pointsAgainst,
-              seasonsPlayed: 1,
-              championships: team.rank === 1 ? 1 : 0,
-              seasons: [league.season],
-            });
+              rank: team.rank,
+              playoffSeed: team.playoffSeed,
+            })
+            .where(eq(schema.teams.teamKey, team.teamKey));
+
+          teamsUpdated++;
+        }
+
+        // Update matchups for all weeks up to and including current week
+        const lastWeekToFetch = league.isFinished
+          ? existingLeague.endWeek || 17
+          : league.currentWeek;
+
+        if (lastWeekToFetch >= previousWeek) {
+          console.log(`  Updating matchups for weeks ${previousWeek}-${lastWeekToFetch}`);
+
+          for (let week = previousWeek; week <= lastWeekToFetch; week++) {
+            const matchups = await fetchMatchups(accessToken, league.leagueKey, week);
+
+            for (const matchup of matchups) {
+              const team1Id = teamKeyToId.get(matchup.team1Key);
+              const team2Id = teamKeyToId.get(matchup.team2Key);
+              const winnerId = matchup.winnerKey ? teamKeyToId.get(matchup.winnerKey) : null;
+
+              if (!team1Id || !team2Id) continue;
+
+              await db
+                .insert(schema.matchups)
+                .values({
+                  leagueId: existingLeague.id,
+                  week: matchup.week,
+                  team1Id,
+                  team2Id,
+                  team1Points: matchup.team1Points,
+                  team2Points: matchup.team2Points,
+                  winnerId,
+                  isPlayoff: matchup.isPlayoff,
+                  isTie: matchup.isTie,
+                })
+                .onConflictDoUpdate({
+                  target: [
+                    schema.matchups.leagueId,
+                    schema.matchups.week,
+                    schema.matchups.team1Id,
+                    schema.matchups.team2Id,
+                  ],
+                  set: {
+                    team1Points: matchup.team1Points,
+                    team2Points: matchup.team2Points,
+                    winnerId,
+                    isPlayoff: matchup.isPlayoff,
+                    isTie: matchup.isTie,
+                  },
+                });
+
+              matchupsUpdated++;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 50));
           }
         }
 
         // Small delay to avoid rate limiting
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Error processing ${league.name}:`, error);
+        console.error(`Error updating ${league.name}:`, error);
       }
     }
 
-    // Convert to array and sort by win percentage
-    const rankings = Array.from(statsMap.values()).sort((a, b) => {
-      if (b.winPct !== a.winPct) return b.winPct - a.winPct;
-      return b.wins - a.wins;
-    });
+    // Recompute all-time rankings
+    console.log("📈 Recomputing all-time rankings...");
+    const rankingsCount = await computeRankings(db);
 
-    // Store in Redis
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      return NextResponse.json({ error: "REDIS_URL not configured" }, { status: 500 });
-    }
-
-    const client = createClient({ url: redisUrl });
-    await client.connect();
-
-    await client.set(REDIS_KEY, JSON.stringify(rankings));
-    await client.destroy();
-
-    console.log(`✅ Aggregated stats for ${rankings.length} managers`);
+    console.log(
+      `✅ Updated ${teamsUpdated} teams, ${matchupsUpdated} matchups, ${rankingsCount} rankings`,
+    );
 
     return NextResponse.json({
       success: true,
-      managersCount: rankings.length,
+      teamsUpdated,
+      matchupsUpdated,
+      rankingsUpdated: rankingsCount,
       leaguesProcessed: leagues.length,
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Aggregation error:", error);
+    console.error("Update error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to aggregate stats" },
+      { error: error instanceof Error ? error.message : "Failed to update stats" },
       { status: 500 },
     );
   }
 }
 
-// Helper functions
+// Database setup
+function createDb() {
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  if (!url) throw new Error("TURSO_DATABASE_URL not set");
+
+  const client = createClient({ url, authToken });
+  return drizzle(client, { schema });
+}
+
+// Yahoo API helpers
 
 interface LeagueInfo {
   leagueKey: string;
-  season: string;
   name: string;
+  currentWeek: number;
+  isFinished: boolean;
+}
+
+interface TeamStanding {
+  teamKey: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  winPct: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  rank: number;
+  playoffSeed?: number;
+}
+
+interface MatchupInfo {
+  week: number;
+  team1Key: string;
+  team2Key: string;
+  team1Points: number;
+  team2Points: number;
+  isPlayoff: boolean;
+  isTie: boolean;
+  winnerKey: string | null;
 }
 
 async function yahooRequest<T>(accessToken: string, endpoint: string): Promise<T> {
@@ -149,7 +233,7 @@ async function yahooRequest<T>(accessToken: string, endpoint: string): Promise<T
   return response.json();
 }
 
-async function getAllLeagues(accessToken: string): Promise<LeagueInfo[]> {
+async function getCurrentSeasonLeagues(accessToken: string, season: string): Promise<LeagueInfo[]> {
   const data = await yahooRequest<Record<string, unknown>>(
     accessToken,
     "/users;use_login=1/games;game_codes=nfl/leagues?format=json",
@@ -169,6 +253,10 @@ async function getAllLeagues(accessToken: string): Promise<LeagueInfo[]> {
     if (!game) continue;
 
     const gameInfo = game[0] as Record<string, unknown>;
+
+    // Only process current season
+    if (gameInfo.season !== season) continue;
+
     const leaguesData = (game[1] as Record<string, unknown>)?.leagues as Record<string, unknown>;
     const leaguesCount = (leaguesData?.count as number) || 0;
 
@@ -178,13 +266,13 @@ async function getAllLeagues(accessToken: string): Promise<LeagueInfo[]> {
       const league = leagueArray?.[0] as Record<string, unknown>;
       if (!league) continue;
 
-      // Skip predraft leagues
       if (league.draft_status === "predraft") continue;
 
       leagues.push({
         leagueKey: league.league_key as string,
-        season: gameInfo.season as string,
         name: league.name as string,
+        currentWeek: parseInt(league.current_week as string, 10) || 1,
+        isFinished: league.is_finished === "1" || league.is_finished === 1,
       });
     }
   }
@@ -192,34 +280,22 @@ async function getAllLeagues(accessToken: string): Promise<LeagueInfo[]> {
   return leagues;
 }
 
-interface StandingsTeam {
-  guid: string;
-  nickname: string;
-  wins: number;
-  losses: number;
-  ties: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  rank: number;
-}
-
-async function getLeagueStandings(
-  accessToken: string,
-  leagueKey: string,
-): Promise<StandingsTeam[]> {
+async function fetchStandings(accessToken: string, leagueKey: string): Promise<TeamStanding[]> {
   const data = await yahooRequest<Record<string, unknown>>(
     accessToken,
     `/league/${leagueKey}/standings?format=json`,
   );
 
-  const teams: StandingsTeam[] = [];
+  const teams: TeamStanding[] = [];
 
   try {
     const fantasy = data.fantasy_content as Record<string, unknown>;
     const league = fantasy?.league as unknown[];
     if (!league?.[1]) return teams;
 
-    const standingsData = ((league[1] as Record<string, unknown>).standings as unknown[])?.[0] as Record<string, unknown>;
+    const standingsData = (
+      (league[1] as Record<string, unknown>).standings as unknown[]
+    )?.[0] as Record<string, unknown>;
     const teamsData = standingsData?.teams as Record<string, unknown>;
     const teamsCount = (teamsData?.count as number) || 0;
 
@@ -227,7 +303,6 @@ async function getLeagueStandings(
       const teamData = (teamsData?.[i.toString()] as Record<string, unknown>)?.team as unknown[];
       if (!teamData) continue;
 
-      // Parse team info
       const teamInfo = teamData[0] as unknown[];
       const flatTeam: Record<string, unknown> = {};
       for (const item of teamInfo) {
@@ -236,25 +311,24 @@ async function getLeagueStandings(
         }
       }
 
-      // Get manager info
-      const managers = flatTeam.managers as Array<{ manager: Record<string, unknown> }>;
-      const manager = managers?.[0]?.manager;
-      if (!manager) continue;
-
-      // Get standings data
-      const standingsInfo = (teamData[2] as Record<string, unknown>)
-        ?.team_standings as Record<string, unknown>;
+      const standingsInfo = (teamData[2] as Record<string, unknown>)?.team_standings as Record<
+        string,
+        unknown
+      >;
       const outcomeTotals = standingsInfo?.outcome_totals as Record<string, string>;
 
       teams.push({
-        guid: manager.guid as string,
-        nickname: manager.nickname as string,
+        teamKey: flatTeam.team_key as string,
         wins: parseInt(outcomeTotals?.wins || "0", 10),
         losses: parseInt(outcomeTotals?.losses || "0", 10),
         ties: parseInt(outcomeTotals?.ties || "0", 10),
+        winPct: parseFloat(outcomeTotals?.percentage || "0"),
         pointsFor: parseFloat(standingsInfo?.points_for as string) || 0,
         pointsAgainst: parseFloat(standingsInfo?.points_against as string) || 0,
         rank: parseInt(standingsInfo?.rank as string, 10) || 0,
+        playoffSeed: standingsInfo?.playoff_seed
+          ? parseInt(standingsInfo.playoff_seed as string, 10)
+          : undefined,
       });
     }
   } catch (error) {
@@ -264,3 +338,157 @@ async function getLeagueStandings(
   return teams;
 }
 
+async function fetchMatchups(
+  accessToken: string,
+  leagueKey: string,
+  week: number,
+): Promise<MatchupInfo[]> {
+  const data = await yahooRequest<Record<string, unknown>>(
+    accessToken,
+    `/league/${leagueKey}/scoreboard;week=${week}?format=json`,
+  );
+
+  const matchups: MatchupInfo[] = [];
+
+  try {
+    const fantasy = data.fantasy_content as Record<string, unknown>;
+    const league = fantasy?.league as unknown[];
+    if (!league?.[1]) return matchups;
+
+    const scoreboard = (league[1] as Record<string, unknown>)?.scoreboard as Record<
+      string,
+      unknown
+    >;
+    const matchupsData = (scoreboard?.["0"] as Record<string, unknown>)?.matchups as Record<
+      string,
+      unknown
+    >;
+    const matchupsCount = (matchupsData?.count as number) || 0;
+
+    for (let i = 0; i < matchupsCount; i++) {
+      const matchupData = (matchupsData?.[i.toString()] as Record<string, unknown>)
+        ?.matchup as Record<string, unknown>;
+      if (!matchupData) continue;
+
+      const isPlayoff = matchupData.is_playoffs === "1" || matchupData.is_playoffs === 1;
+
+      const teamsInMatchup = (matchupData["0"] as Record<string, unknown>)?.teams as Record<
+        string,
+        unknown
+      >;
+      if (!teamsInMatchup || (teamsInMatchup.count as number) !== 2) continue;
+
+      // Get team 1
+      const team1Data = (teamsInMatchup["0"] as Record<string, unknown>)?.team as unknown[];
+      const team1Info = team1Data?.[0] as unknown[];
+      const team1Flat: Record<string, unknown> = {};
+      for (const item of team1Info || []) {
+        if (typeof item === "object" && item !== null) {
+          Object.assign(team1Flat, item);
+        }
+      }
+      const team1Points = (team1Data?.[1] as Record<string, unknown>)?.team_points as Record<
+        string,
+        unknown
+      >;
+
+      // Get team 2
+      const team2Data = (teamsInMatchup["1"] as Record<string, unknown>)?.team as unknown[];
+      const team2Info = team2Data?.[0] as unknown[];
+      const team2Flat: Record<string, unknown> = {};
+      for (const item of team2Info || []) {
+        if (typeof item === "object" && item !== null) {
+          Object.assign(team2Flat, item);
+        }
+      }
+      const team2Points = (team2Data?.[1] as Record<string, unknown>)?.team_points as Record<
+        string,
+        unknown
+      >;
+
+      const t1Points = parseFloat(team1Points?.total as string) || 0;
+      const t2Points = parseFloat(team2Points?.total as string) || 0;
+      const isTie = t1Points === t2Points && t1Points > 0;
+
+      let winnerKey: string | null = null;
+      if (!isTie && (t1Points > 0 || t2Points > 0)) {
+        winnerKey =
+          t1Points > t2Points ? (team1Flat.team_key as string) : (team2Flat.team_key as string);
+      }
+
+      matchups.push({
+        week,
+        team1Key: team1Flat.team_key as string,
+        team2Key: team2Flat.team_key as string,
+        team1Points: t1Points,
+        team2Points: t2Points,
+        isPlayoff,
+        isTie,
+        winnerKey,
+      });
+    }
+  } catch (error) {
+    console.error(`Error parsing matchups for ${leagueKey} week ${week}:`, error);
+  }
+
+  return matchups;
+}
+
+async function computeRankings(db: ReturnType<typeof createDb>): Promise<number> {
+  const managerStats = await db
+    .select({
+      managerId: schema.managers.id,
+      totalWins: sql<number>`SUM(${schema.teams.wins})`,
+      totalLosses: sql<number>`SUM(${schema.teams.losses})`,
+      totalTies: sql<number>`SUM(${schema.teams.ties})`,
+      totalPointsFor: sql<number>`SUM(${schema.teams.pointsFor})`,
+      totalPointsAgainst: sql<number>`SUM(${schema.teams.pointsAgainst})`,
+      seasonsPlayed: sql<number>`COUNT(DISTINCT ${schema.teams.leagueId})`,
+      championships: sql<number>`SUM(CASE WHEN ${schema.teams.rank} = 1 THEN 1 ELSE 0 END)`,
+      playoffAppearances: sql<number>`SUM(CASE WHEN ${schema.teams.isPlayoffTeam} = 1 THEN 1 ELSE 0 END)`,
+    })
+    .from(schema.managers)
+    .innerJoin(schema.teams, eq(schema.teams.managerId, schema.managers.id))
+    .groupBy(schema.managers.id);
+
+  for (const stat of managerStats) {
+    const totalGames = stat.totalWins + stat.totalLosses + stat.totalTies;
+    const winPct = totalGames > 0 ? stat.totalWins / totalGames : 0;
+    const pointDiff = stat.totalPointsFor - stat.totalPointsAgainst;
+
+    await db
+      .insert(schema.rankings)
+      .values({
+        managerId: stat.managerId,
+        totalWins: stat.totalWins,
+        totalLosses: stat.totalLosses,
+        totalTies: stat.totalTies,
+        winPct,
+        totalPointsFor: stat.totalPointsFor,
+        totalPointsAgainst: stat.totalPointsAgainst,
+        pointDiff,
+        seasonsPlayed: stat.seasonsPlayed,
+        championships: stat.championships,
+        playoffAppearances: stat.playoffAppearances,
+        updatedAt: new Date().toISOString(),
+      })
+      .onConflictDoUpdate({
+        target: schema.rankings.managerId,
+        set: {
+          totalWins: stat.totalWins,
+          totalLosses: stat.totalLosses,
+          totalTies: stat.totalTies,
+          winPct,
+          totalPointsFor: stat.totalPointsFor,
+          totalPointsAgainst: stat.totalPointsAgainst,
+          pointDiff,
+          seasonsPlayed: stat.seasonsPlayed,
+          championships: stat.championships,
+          playoffAppearances: stat.playoffAppearances,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+  }
+
+  return managerStats.length;
+}

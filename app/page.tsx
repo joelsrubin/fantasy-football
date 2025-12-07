@@ -2,24 +2,24 @@
 
 import {
   type ColumnDef,
-  type SortingState,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
+  type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 import Link from "next/link";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, useMemo, useState } from "react";
+import type { League } from "@/db/schema";
 import {
-  type LeagueInfo,
   type RankingEntry,
+  useFunFacts,
   useMyLeagues,
   useRankings,
 } from "@/lib/hooks/use-fantasy-data";
 
 const tabs = ["leagues", "rankings"] as const;
-type Tab = (typeof tabs)[number];
 
 export default function Home() {
   return (
@@ -43,6 +43,8 @@ function HomeContent() {
     "tab",
     parseAsStringLiteral(tabs).withDefault("leagues"),
   );
+  const { data: funFacts } = useFunFacts();
+  console.log({ funFacts });
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -387,7 +389,9 @@ function RankingsTab() {
                       <th
                         key={header.id}
                         className={`px-4 py-4 ${isHiddenOnMobile ? "hidden sm:table-cell" : ""} ${
-                          header.column.getCanSort() ? "cursor-pointer select-none hover:text-zinc-300" : ""
+                          header.column.getCanSort()
+                            ? "cursor-pointer select-none hover:text-zinc-300"
+                            : ""
                         }`}
                         onClick={header.column.getToggleSortingHandler()}
                       >
@@ -396,9 +400,8 @@ function RankingsTab() {
                           {{
                             asc: <SortAscIcon />,
                             desc: <SortDescIcon />,
-                          }[header.column.getIsSorted() as string] ?? (
-                            header.column.getCanSort() ? <SortIcon /> : null
-                          )}
+                          }[header.column.getIsSorted() as string] ??
+                            (header.column.getCanSort() ? <SortIcon /> : null)}
                         </div>
                       </th>
                     );
@@ -453,15 +456,32 @@ function RankingsTab() {
 
 function SortIcon() {
   return (
-    <svg className="h-3 w-3 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+    <svg
+      aria-hidden="true"
+      className="h-3 w-3 text-zinc-600"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+      />
     </svg>
   );
 }
 
 function SortAscIcon() {
   return (
-    <svg className="h-3 w-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg
+      aria-hidden="true"
+      className="h-3 w-3 text-violet-400"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
     </svg>
   );
@@ -469,15 +489,21 @@ function SortAscIcon() {
 
 function SortDescIcon() {
   return (
-    <svg className="h-3 w-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg
+      aria-hidden="true"
+      className="h-3 w-3 text-violet-400"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }
 
-function LeagueCard({ league }: { league: LeagueInfo }) {
-  const isCurrent = league.season === "2025";
-
+function LeagueCard({ league }: { league: League }) {
+  const isCurrent = league.season === new Date().getFullYear().toString();
+  console.log(league);
   return (
     <Link
       href={`/league/${league.leagueKey}`}
@@ -494,7 +520,7 @@ function LeagueCard({ league }: { league: LeagueInfo }) {
 
       {/* League Info */}
       <div className="mb-4 flex items-start gap-4">
-        {league.logoUrl ? (
+        {league.logoUrl && league.logoUrl !== "0" ? (
           <picture>
             <img
               src={league.logoUrl}
