@@ -72,6 +72,74 @@ export async function GET() {
   const closestLoserPoints =
     closestTeam1Points > closestTeam2Points ? closestTeam2Points : closestTeam1Points;
 
+  // Fetch longest win streak
+  const allMatchups = await db
+    .select({
+      matchup: matchups,
+      league: leagues,
+      winner: teams,
+    })
+    .from(matchups)
+    .innerJoin(leagues, eq(matchups.leagueId, leagues.id))
+    .innerJoin(teams, eq(matchups.winnerId, teams.id))
+    .where(isNotNull(matchups.winnerId))
+    .orderBy(matchups.leagueId, matchups.winnerId, matchups.week);
+
+  // Calculate win streaks
+  const streaks: {
+    team: typeof teams.$inferSelect;
+    league: typeof leagues.$inferSelect;
+    streak: number;
+    startWeek: number;
+    endWeek: number;
+  }[] = [];
+  let currentStreak = 0;
+  let currentTeam: typeof teams.$inferSelect | null = null;
+  let currentLeague: typeof leagues.$inferSelect | null = null;
+  let streakStartWeek = 0;
+  let lastWeek = 0;
+
+  for (const row of allMatchups) {
+    const isConsecutive = lastWeek === 0 || lastWeek + 1 === row.matchup.week;
+    if (
+      currentTeam?.id !== row.winner.id ||
+      currentLeague?.id !== row.league.id ||
+      !isConsecutive
+    ) {
+      if (currentStreak > 0) {
+        streaks.push({
+          team: currentTeam!,
+          league: currentLeague!,
+          streak: currentStreak,
+          startWeek: streakStartWeek,
+          endWeek: lastWeek,
+        });
+      }
+      currentTeam = row.winner;
+      currentLeague = row.league;
+      currentStreak = 1;
+      streakStartWeek = row.matchup.week;
+      lastWeek = row.matchup.week;
+    } else {
+      currentStreak++;
+      lastWeek = row.matchup.week;
+    }
+  }
+  if (currentStreak > 0) {
+    streaks.push({
+      team: currentTeam!,
+      league: currentLeague!,
+      streak: currentStreak,
+      startWeek: streakStartWeek,
+      endWeek: lastWeek,
+    });
+  }
+
+  const longestStreak = streaks.reduce(
+    (max, s) => (s.streak > max.streak ? s : max),
+    streaks[0] || { streak: 0 },
+  );
+
   const funFacts = [
     {
       type: "biggestBlowout",
@@ -102,6 +170,15 @@ export async function GET() {
         points: closestLoserPoints,
       },
       margin: Math.abs(closestWinnerPoints - closestLoserPoints),
+    },
+    {
+      type: "longestWinStreak",
+      team: longestStreak?.team?.name ?? "Unknown",
+      league: longestStreak?.league?.name ?? "Unknown",
+      year: longestStreak?.league?.season ?? "Unknown",
+      streak: longestStreak?.streak ?? 0,
+      startWeek: longestStreak?.startWeek ?? 0,
+      endWeek: longestStreak?.endWeek ?? 0,
     },
   ];
 

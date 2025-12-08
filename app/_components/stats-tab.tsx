@@ -3,7 +3,7 @@ import { FactCard } from "./fact-card";
 
 export function StatsTab() {
   const { data: funFacts, isLoading, error } = useFunFacts();
-
+  console.log({ funFacts });
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -66,6 +66,27 @@ export function StatsTab() {
         marginColor: "text-orange-400",
       };
     }
+    if (type === "longestWinStreak") {
+      return {
+        title: "Longest Win Streak",
+        icon: (
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"
+          />
+        ),
+        bgColors: "from-zinc-900 via-zinc-900 to-emerald-950/20",
+        iconBg: "from-emerald-500/20 to-green-500/20",
+        iconRing: "ring-emerald-500/30",
+        iconColor: "text-emerald-400",
+        gradientRight: "bg-emerald-500/5",
+        gradientLeft: "bg-green-500/5",
+        marginBg: "from-emerald-500/10 via-green-500/10 to-emerald-500/10",
+        marginColor: "text-green-400",
+      };
+    }
     // closestMatchup
     return {
       title: "Closest Matchup",
@@ -88,6 +109,8 @@ export function StatsTab() {
     };
   };
 
+  const winStreakFact = funFacts?.[2];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -97,12 +120,21 @@ export function StatsTab() {
 
       {/* Stats Grid */}
       <div className="grid gap-6 lg:grid-cols-2 grid-cols-1">
-        {funFacts.map((fact) => {
+        {funFacts.slice(0, 2).map((fact) => {
           const config = getCardConfig(fact.type);
           return (
             <FactCard key={`${fact.type}-${fact.week}-${fact.year}`} fact={fact} config={config} />
           );
         })}
+        {winStreakFact ? (
+          <FactCard
+            key={`longestWinStreak-${winStreakFact.week}-${winStreakFact.year}`}
+            fact={winStreakFact}
+            config={getCardConfig("longestWinStreak")}
+          />
+        ) : (
+          <p className="text-zinc-500">Loading...</p>
+        )}
       </div>
 
       {/* Coming Soon Section */}

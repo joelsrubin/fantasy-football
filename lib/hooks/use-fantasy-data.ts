@@ -115,15 +115,26 @@ async function fetchTeamRoster(
   return data.roster;
 }
 
-export interface FunFact {
-  type: "biggestBlowout" | "closestMatchup";
-  week: number;
-  year: string;
-  isPlayoff: boolean;
-  winner: { name: string; points: number };
-  loser: { name: string; points: number };
-  margin: number;
-}
+export type FunFact =
+  | {
+      type: "biggestBlowout" | "closestMatchup";
+      week: number;
+      year: string;
+      isPlayoff: boolean;
+      winner: { name: string; points: number };
+      loser: { name: string; points: number };
+      margin: number;
+    }
+  | {
+      type: "longestWinStreak";
+      week: number;
+      year: string;
+      isPlayoff: boolean;
+      startWeek: number;
+      endWeek: number;
+      team: string;
+      streak: number;
+    };
 
 export type FunFacts = FunFact[];
 
