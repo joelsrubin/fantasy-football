@@ -60,7 +60,7 @@ export function FactCard({
         <div className="mb-6 rounded-xl bg-zinc-800/50 p-4">
           <div className="flex flex-col md:flex-row space-y-4 items-center justify-between">
             {/* Winner */}
-            <div className="flex-1 text-center">
+            <div className="flex-1 text-center mb-0">
               <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-500/50">
                 <svg
                   className="h-5 w-5 text-emerald-400"
