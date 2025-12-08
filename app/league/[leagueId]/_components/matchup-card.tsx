@@ -68,7 +68,7 @@ export function MatchupCard({
           <div
             className={`shrink-0 text-2xl font-bold ${team1Wins && shouldShowCheck ? "text-emerald-400" : "text-white"}`}
           >
-            {score1.toFixed(1)}
+            {score1.toFixed(2)}
           </div>
           {shouldShowCheck && team1Wins && (
             <div className="rounded-full bg-emerald-500/20 p-1">
@@ -124,7 +124,7 @@ export function MatchupCard({
           <div
             className={`shrink-0 text-2xl font-bold ${team2Wins && shouldShowCheck ? "text-emerald-400" : "text-white"}`}
           >
-            {score2.toFixed(1)}
+            {score2.toFixed(2)}
           </div>
           {shouldShowCheck && team2Wins && (
             <div className="rounded-full bg-emerald-500/20 p-1">
