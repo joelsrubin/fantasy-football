@@ -60,8 +60,8 @@ export function StatsTab() {
         iconBg: "from-red-500/20 to-orange-500/20",
         iconRing: "ring-red-500/30",
         iconColor: "text-red-400",
-        gradientRight: "bg-red-500/5 group-hover:bg-red-500/10",
-        gradientLeft: "bg-orange-500/5 group-hover:bg-orange-500/10",
+        gradientRight: "bg-red-500/5",
+        gradientLeft: "bg-orange-500/5",
         marginBg: "from-red-500/10 via-orange-500/10 to-red-500/10",
         marginColor: "text-orange-400",
       };
@@ -81,8 +81,8 @@ export function StatsTab() {
       iconBg: "from-blue-500/20 to-cyan-500/20",
       iconRing: "ring-blue-500/30",
       iconColor: "text-blue-400",
-      gradientRight: "bg-blue-500/5 group-hover:bg-blue-500/10",
-      gradientLeft: "bg-cyan-500/5 group-hover:bg-cyan-500/10",
+      gradientRight: "bg-blue-500/5",
+      gradientLeft: "bg-cyan-500/5",
       marginBg: "from-blue-500/10 via-cyan-500/10 to-blue-500/10",
       marginColor: "text-cyan-400",
     };
