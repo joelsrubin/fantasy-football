@@ -115,18 +115,25 @@ async function fetchTeamRoster(
   return data.roster;
 }
 
-async function fetchFunFacts(): Promise<{
-  closestMatchup: MatchupEntry;
-  biggestBlowout: MatchupEntry;
-}> {
+export interface FunFact {
+  type: "biggestBlowout" | "closestMatchup";
+  week: number;
+  year: string;
+  isPlayoff: boolean;
+  winner: { name: string; points: number };
+  loser: { name: string; points: number };
+  margin: number;
+}
+
+export type FunFacts = FunFact[];
+
+async function fetchFunFacts(): Promise<FunFacts> {
   const response = await fetch("/api/fun-facts");
   if (!response.ok) {
     const data = await response.json();
     throw new Error(data.error || "Failed to fetch fun facts");
   }
-  const data = await response.json();
-
-  return data as { closestMatchup: MatchupEntry; biggestBlowout: MatchupEntry };
+  return response.json();
 }
 
 export interface RankingEntry {
