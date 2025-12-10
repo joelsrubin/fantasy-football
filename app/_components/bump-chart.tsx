@@ -130,10 +130,12 @@ export function BumpChart({ leagueId }: BumpChartProps) {
       </div>
       <div className="overflow-x-auto">
         <div className="h-[400px] min-w-[600px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            initialDimension={{ width: 600, height: 400 }}
+          >
             <LineChart
-              width={"100%"}
-              height={"100%"}
               data={chartData}
               margin={{
                 top: 20,
