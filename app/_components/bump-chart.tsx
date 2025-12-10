@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import type { DataKey } from "recharts/types/util/types";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useWeeklyRankings, type WeeklyRankingData } from "@/lib/hooks/use-weekly-rankings";
 
 interface BumpChartProps {
@@ -29,16 +30,8 @@ export function BumpChart({ leagueId }: BumpChartProps) {
   const handleMouseLeave = () => {
     setHoveringDataKey(undefined);
   };
-  if (isLoading) {
-    return (
-      <div className="rounded-lg p-6 shadow">
-        <h3 className="text-lg font-semibold mb-4">Manager Rankings Throughout Season</h3>
-        <div className="h-[400px] bg-gray-100 dark:bg-gray-700/10 rounded animate-pulse" />
-      </div>
-    );
-  }
 
-  if (error || !data?.weeklyRankings) {
+  if (error) {
     return (
       <div className=" rounded-lg p-6 shadow">
         <h3 className="text-lg font-semibold mb-4">Manager Rankings Throughout Season</h3>
@@ -49,7 +42,7 @@ export function BumpChart({ leagueId }: BumpChartProps) {
     );
   }
 
-  const weeklyRankings: WeeklyRankingData[] = data.weeklyRankings;
+  const weeklyRankings: WeeklyRankingData[] = data?.weeklyRankings || [];
 
   // Get all unique weeks and managers
   const weeks = [...new Set(weeklyRankings.map((w) => w.week))].sort((a, b) => a - b);
@@ -127,77 +120,84 @@ export function BumpChart({ leagueId }: BumpChartProps) {
       </div>
       <div className="overflow-x-auto">
         <div className="h-[400px] min-w-[600px]">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-            initialDimension={{ width: 600, height: 400 }}
-          >
-            <LineChart
-              data={chartData}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 20,
-              }}
+          {isLoading ? (
+            <Skeleton className="h-[400px] w-full" />
+          ) : (
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              initialDimension={{ width: 600, height: 400 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-              <XAxis
-                dataKey="week"
-                tick={{ fill: "#9CA3AF" }}
-                tickLine={{ stroke: "#4B5563" }}
-                axisLine={{ stroke: "#4B5563" }}
-                label={{
-                  value: "Week",
-                  position: "insideBottomRight",
-                  offset: -5,
-                  fill: "#9CA3AF",
+              <LineChart
+                data={chartData}
+                margin={{
+                  top: 20,
+                  right: 30,
+                  left: 20,
+                  bottom: 20,
                 }}
-              />
-              <YAxis
-                reversed
-                domain={[1, "dataMax + 1"]}
-                tick={{ fill: "#9CA3AF" }}
-                tickLine={{ stroke: "#4B5563" }}
-                axisLine={{ stroke: "#4B5563" }}
-                label={{
-                  value: "Rank",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: "#9CA3AF",
-                  style: { textAnchor: "middle" },
-                }}
-                tickCount={
-                  Math.max(...Array.from(managerRanks.values()).flatMap((r) => r.filter(Boolean))) +
-                  1
-                }
-              />
-              {sortedManagers.map((manager, index) => (
-                <Line
-                  key={manager}
-                  type="monotone"
-                  dataKey={manager}
-                  stroke={COLORS[index % COLORS.length]}
-                  strokeWidth={4}
-                  dot={false}
-                  activeDot={false}
-                  name={manager}
-                  isAnimationActive={false}
-                  opacity={hoveringDataKey === manager || hoveringDataKey === undefined ? 1 : 0.25}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+                <XAxis
+                  dataKey="week"
+                  tick={{ fill: "#9CA3AF" }}
+                  tickLine={{ stroke: "#4B5563" }}
+                  axisLine={{ stroke: "#4B5563" }}
+                  label={{
+                    value: "Week",
+                    position: "insideBottomRight",
+                    offset: -5,
+                    fill: "#9CA3AF",
+                  }}
                 />
-              ))}
-              <Legend
-                layout="horizontal"
-                verticalAlign="bottom"
-                align="left"
-                wrapperStyle={{
-                  color: "#9CA3AF",
-                }}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-              />
-            </LineChart>{" "}
-          </ResponsiveContainer>
+                <YAxis
+                  reversed
+                  domain={[1, "dataMax + 1"]}
+                  tick={{ fill: "#9CA3AF" }}
+                  tickLine={{ stroke: "#4B5563" }}
+                  axisLine={{ stroke: "#4B5563" }}
+                  label={{
+                    value: "Rank",
+                    angle: -90,
+                    position: "insideLeft",
+                    fill: "#9CA3AF",
+                    style: { textAnchor: "middle" },
+                  }}
+                  tickCount={
+                    Math.max(
+                      ...Array.from(managerRanks.values()).flatMap((r) => r.filter(Boolean)),
+                    ) + 1
+                  }
+                />
+                {sortedManagers.map((manager, index) => (
+                  <Line
+                    key={manager}
+                    type="monotone"
+                    dataKey={manager}
+                    stroke={COLORS[index % COLORS.length]}
+                    strokeWidth={4}
+                    dot={false}
+                    activeDot={false}
+                    name={manager}
+                    isAnimationActive={false}
+                    opacity={
+                      hoveringDataKey === manager || hoveringDataKey === undefined ? 1 : 0.25
+                    }
+                  />
+                ))}
+                <Legend
+                  layout="horizontal"
+                  verticalAlign="bottom"
+                  align="left"
+                  wrapperStyle={{
+                    color: "#9CA3AF",
+                  }}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                />
+              </LineChart>{" "}
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>
