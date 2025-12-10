@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { type RankingEntry, useRankings } from "@/lib/hooks/use-fantasy-data";
+import { StatsTab } from "./stats-tab";
 
 export function RankingsTab() {
   const { data: rankings, isLoading, error } = useRankings();
@@ -147,12 +148,7 @@ export function RankingsTab() {
   }
 
   return (
-    <>
-      {/* Stats Summary */}
-      <div className="mb-8 text-center">
-        <p className="text-zinc-400">{rankings.length} all-time participants</p>
-      </div>
-
+    <div className="space-y-8">
       {/* Rankings Table */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
         <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4">
@@ -236,7 +232,8 @@ export function RankingsTab() {
           </table>
         </div>
       </div>
-    </>
+      <StatsTab />
+    </div>
   );
 }
 

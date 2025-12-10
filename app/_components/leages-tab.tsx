@@ -76,11 +76,6 @@ export function LeaguesTab() {
   return (
     <>
       {/* Stats Summary */}
-      <div className="mb-8 text-center">
-        <p className="text-zinc-400">
-          {seasons.length} seasons • {seasons.reduce((acc, s) => acc + s.leagues.length, 0)} leagues
-        </p>
-      </div>
 
       {/* Seasons */}
       <div className="space-y-10">

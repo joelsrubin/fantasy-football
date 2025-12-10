@@ -113,11 +113,6 @@ export function StatsTab() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <p className="text-zinc-400">League records and memorable moments</p>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid gap-6 lg:grid-cols-2 grid-cols-1">
         {funFacts.slice(0, 2).map((fact) => {

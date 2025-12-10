@@ -1,21 +1,26 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, HeartHandshake, LineChart, Trophy } from "lucide-react";
 import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { use, useEffect } from "react";
 import { BumpChart } from "@/app/_components/bump-chart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLeague, useScoreboard, useStandings } from "@/lib/hooks/use-fantasy-data";
 import { Scoreboard } from "./_components/scoreboard";
 import { StandingsTable } from "./_components/standings-table";
 
-const tabs = ["standings", "scoreboard", "rankings"] as const;
+const tabs = [
+  { label: "standings", Icon: Trophy },
+  { label: "matchups", Icon: HeartHandshake },
+  { label: "stats", Icon: LineChart },
+] as const;
 
 export default function LeaguePage({ params }: { params: Promise<{ leagueId: string }> }) {
   const { leagueId } = use(params);
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(tabs).withDefault("standings"),
+    parseAsStringLiteral(tabs.map((t) => t.label)).withDefault("standings"),
   );
   const [selectedWeek, setSelectedWeek] = useQueryState("week", parseAsInteger.withDefault(0));
 
@@ -156,58 +161,42 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
       )}
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("standings")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            activeTab === "standings"
-              ? "bg-violet-500 text-white"
-              : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-          }`}
-        >
-          Standings
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("scoreboard")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            activeTab === "scoreboard"
-              ? "bg-violet-500 text-white"
-              : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-          }`}
-        >
-          Scoreboard
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("rankings")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            activeTab === "rankings"
-              ? "bg-violet-500 text-white"
-              : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-          }`}
-        >
-          Rankings
-        </button>
-      </div>
+      <Tabs defaultValue={activeTab} className="gap-8">
+        <TabsList className="mx-auto bg-slate-200/5 ">
+          {tabs.map(({ label, Icon }) => (
+            <TabsTrigger
+              value={label}
+              key={label}
+              className="dark:data-[state=active]:border-violet-400 p-4"
+              onClick={() => {
+                setActiveTab(label);
+              }}
+            >
+              <Icon />
+              {label.charAt(0).toUpperCase() + label.slice(1)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* Content */}
-      {activeTab === "standings" ? (
-        <StandingsTable standings={standings ?? []} leagueId={leagueId} />
-      ) : activeTab === "scoreboard" ? (
-        <Scoreboard
-          matchups={matchups ?? []}
-          selectedWeek={effectiveWeek ?? 1}
-          setSelectedWeek={setSelectedWeek}
-          league={league ?? null}
-          leagueId={leagueId}
-          isLoading={scoreboardFetching}
-          winLossRecords={winLossRecords}
-        />
-      ) : (
-        <BumpChart leagueId={league?.leagueKey || leagueId} />
-      )}
+        {/* Content */}
+        <TabsContent value="standings">
+          <StandingsTable standings={standings ?? []} leagueId={leagueId} />
+        </TabsContent>
+        <TabsContent value="matchups">
+          <Scoreboard
+            matchups={matchups ?? []}
+            selectedWeek={effectiveWeek ?? 1}
+            setSelectedWeek={setSelectedWeek}
+            league={league ?? null}
+            leagueId={leagueId}
+            isLoading={scoreboardFetching}
+            winLossRecords={winLossRecords}
+          />
+        </TabsContent>
+        <TabsContent value="stats">
+          <BumpChart leagueId={league?.leagueKey || leagueId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
