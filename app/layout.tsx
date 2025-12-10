@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { QueryProvider } from "@/lib/query-client";
 import "./globals.css";
+import { CupSoda } from "lucide-react";
 import WindowSizeContainer from "@/lib/containers/window-size-container";
 
 const spaceGrotesk = Space_Grotesk({
@@ -58,22 +59,9 @@ export default function RootLayout({
               <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
                 <Link href="/" className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-fuchsia-500">
-                    <svg
-                      className="h-6 w-6 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
+                    <CupSoda />
                   </div>
-                  <h1 className="text-xl font-bold text-white">Fantasy Football</h1>
+                  <h1 className="text-xl font-bold text-white">The Bodega</h1>
                 </Link>
               </div>
             </header>

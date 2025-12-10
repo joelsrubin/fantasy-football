@@ -3,7 +3,7 @@ import { FactCard } from "./fact-card";
 
 export function StatsTab() {
   const { data: funFacts, isLoading, error } = useFunFacts();
-  console.log({ funFacts });
+
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">

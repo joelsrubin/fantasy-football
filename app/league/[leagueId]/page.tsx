@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { use, useEffect } from "react";
@@ -107,20 +108,7 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
         href="/"
         className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
       >
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
-        </svg>
+        <ArrowLeft />
         Back to Home
       </Link>
 

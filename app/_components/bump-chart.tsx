@@ -183,9 +183,9 @@ export function BumpChart({ leagueId }: BumpChartProps) {
                   stroke={COLORS[index % COLORS.length]}
                   strokeWidth={4}
                   dot={false}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  activeDot={false}
                   name={manager}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                   opacity={hoveringDataKey === manager || hoveringDataKey === undefined ? 1 : 0.25}
                 />
               ))}

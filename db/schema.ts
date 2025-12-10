@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // Managers - unique users identified by Yahoo guid
@@ -140,6 +140,17 @@ export const weeklyRankings = sqliteTable(
   ],
 );
 
+export const managersRelations = relations(managers, ({ many }) => ({
+  teams: many(teams),
+}));
+
+export const teamsRelations = relations(teams, ({ one }) => ({
+  manager: one(managers, {
+    fields: [teams.managerId],
+    references: [managers.id],
+  }),
+}));
+
 // Type exports for inserts
 export type InsertManager = typeof managers.$inferInsert;
 export type InsertLeague = typeof leagues.$inferInsert;
@@ -155,3 +166,6 @@ export type Team = typeof teams.$inferSelect;
 export type Matchup = typeof matchups.$inferSelect;
 export type Ranking = typeof rankings.$inferSelect;
 export type WeeklyRanking = typeof weeklyRankings.$inferSelect;
+export type ManagerWithTeams = Manager & {
+  teams: Team[];
+};

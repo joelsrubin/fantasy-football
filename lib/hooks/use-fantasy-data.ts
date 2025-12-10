@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { League } from "@/db/schema";
+import type { League, ManagerWithTeams } from "@/db/schema";
 import type { YahooRosterPlayer } from "@/lib/yahoo-fantasy";
 
 interface SeasonData {
@@ -173,6 +173,15 @@ async function fetchRankings(): Promise<RankingEntry[]> {
   return data.rankings;
 }
 
+async function fetchManagers(): Promise<ManagerWithTeams[]> {
+  const response = await fetch("/api/managers");
+  if (!response.ok) {
+    throw new Error("Failed to fetch managers");
+  }
+  const data = await response.json();
+  return data.managers;
+}
+
 // Hooks
 export function useMyLeagues() {
   return useQuery({
@@ -233,6 +242,14 @@ export function useFunFacts() {
     queryKey: ["fun-facts"],
     queryFn: fetchFunFacts,
     staleTime: 60 * 1000, // 1 minute
+  });
+}
+
+export function useManagers() {
+  return useQuery({
+    queryKey: ["managers"],
+    queryFn: fetchManagers,
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours - this data only changes when we run aggregate script
   });
 }
 

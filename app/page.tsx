@@ -1,13 +1,20 @@
 "use client";
 
+import { ContactRound, type LucideProps, Sparkles, Trophy, UsersRound } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { Suspense } from "react";
-
+import { type ForwardRefExoticComponent, type RefAttributes, Suspense } from "react";
+import { useWindowSize } from "@/lib/hooks/use-window.size";
 import { LeaguesTab } from "./_components/leages-tab";
+import { ManagersTab } from "./_components/managers-tab";
 import { RankingsTab } from "./_components/rankings-tab";
 import { StatsTab } from "./_components/stats-tab";
 
-const tabs = ["leagues", "rankings", "stats"] as const;
+const tabs = [
+  { label: "leagues", icon: ContactRound },
+  { label: "rankings", icon: Trophy },
+  { label: "stats", icon: Sparkles },
+  { label: "managers", icon: UsersRound },
+] as const;
 
 export default function Home() {
   return (
@@ -29,106 +36,63 @@ export default function Home() {
 function HomeContent() {
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(tabs).withDefault("leagues"),
+    parseAsStringLiteral(Object.keys(tabs)).withDefault("leagues"),
   );
-
+  const capitalizedLabel = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl px-6 py-8">
       {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="mb-3 text-4xl font-bold text-white">Bodega Bottle Service</h1>
-        <p className="text-lg text-zinc-400">Fantasy Football Headquarters</p>
-      </div>
+      <div className="mb-8 text-xl font-bold text-white text-center">{capitalizedLabel}</div>
 
       {/* Tabs */}
       <div className="mb-8 flex justify-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setActiveTab("leagues")}
-          className={`rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
-            activeTab === "leagues"
-              ? "bg-violet-500 text-white"
-              : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
-            Leagues
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("rankings")}
-          className={`rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
-            activeTab === "rankings"
-              ? "bg-violet-500 text-white"
-              : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            All-Time Rankings
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("stats")}
-          className={`rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
-            activeTab === "stats"
-              ? "bg-violet-500 text-white"
-              : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            Fun Facts
-          </span>
-        </button>
+        {tabs.map((tab) => (
+          <TabButton
+            label={tab.label}
+            onClick={() => setActiveTab(tab.label)}
+            key={tab.label}
+            isActive={activeTab === tab.label}
+            Icon={tab.icon}
+          />
+        ))}
       </div>
 
       {/* Content */}
       {activeTab === "leagues" && <LeaguesTab />}
       {activeTab === "rankings" && <RankingsTab />}
       {activeTab === "stats" && <StatsTab />}
+      {activeTab === "managers" && <ManagersTab />}
     </div>
+  );
+}
+
+function TabButton({
+  isActive,
+  onClick,
+  label,
+  Icon,
+}: {
+  isActive: boolean;
+  onClick: () => void;
+  label: string;
+  Icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
+}) {
+  const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+  const { isMobile } = useWindowSize();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-2 sm:px-4 py-2.5 text-xs font-medium transition-all ${
+        isActive
+          ? "bg-violet-500 text-white"
+          : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+      }`}
+    >
+      <span className="flex items-center gap-2">
+        <Icon size={isMobile ? 14 : 22} />
+        {capitalizedLabel}
+      </span>
+    </button>
   );
 }
