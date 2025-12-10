@@ -128,72 +128,78 @@ export function BumpChart({ leagueId }: BumpChartProps) {
           Lower numbers indicate better rankings. Week {weeks[0] || 1} to Week {latestWeek}
         </p>
       </div>
-      <div className="h-[500px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            width={"100%"}
-            height={"100%"}
-            data={chartData}
-            margin={{
-              top: 20,
-              right: 30,
-              left: 20,
-              bottom: 20,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-            <XAxis
-              dataKey="week"
-              tick={{ fill: "#9CA3AF" }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
-              label={{ value: "Week", position: "insideBottomRight", offset: -5, fill: "#9CA3AF" }}
-            />
-            <YAxis
-              reversed
-              domain={[1, "dataMax + 1"]}
-              tick={{ fill: "#9CA3AF" }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
-              label={{
-                value: "Rank",
-                angle: -90,
-                position: "insideLeft",
-                fill: "#9CA3AF",
-                style: { textAnchor: "middle" },
+      <div className="overflow-x-auto">
+        <div className="h-[400px] min-w-[600px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              width={"100%"}
+              height={"100%"}
+              data={chartData}
+              margin={{
+                top: 20,
+                right: 30,
+                left: 20,
+                bottom: 20,
               }}
-              tickCount={
-                Math.max(...Array.from(managerRanks.values()).flatMap((r) => r.filter(Boolean))) + 1
-              }
-            />
-
-            <Legend
-              layout="horizontal"
-              verticalAlign="bottom"
-              align="left"
-              wrapperStyle={{
-                paddingTop: "20px",
-                color: "#9CA3AF",
-              }}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-            />
-            {sortedManagers.map((manager, index) => (
-              <Line
-                key={manager}
-                type="monotone"
-                dataKey={manager}
-                stroke={COLORS[index % COLORS.length]}
-                strokeWidth={4}
-                dot={false}
-                activeDot={{ r: 6, strokeWidth: 0 }}
-                name={manager}
-                isAnimationActive={false}
-                opacity={hoveringDataKey === manager || hoveringDataKey === undefined ? 1 : 0.25}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+              <XAxis
+                dataKey="week"
+                tick={{ fill: "#9CA3AF" }}
+                tickLine={{ stroke: "#4B5563" }}
+                axisLine={{ stroke: "#4B5563" }}
+                label={{
+                  value: "Week",
+                  position: "insideBottomRight",
+                  offset: -5,
+                  fill: "#9CA3AF",
+                }}
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              <YAxis
+                reversed
+                domain={[1, "dataMax + 1"]}
+                tick={{ fill: "#9CA3AF" }}
+                tickLine={{ stroke: "#4B5563" }}
+                axisLine={{ stroke: "#4B5563" }}
+                label={{
+                  value: "Rank",
+                  angle: -90,
+                  position: "insideLeft",
+                  fill: "#9CA3AF",
+                  style: { textAnchor: "middle" },
+                }}
+                tickCount={
+                  Math.max(...Array.from(managerRanks.values()).flatMap((r) => r.filter(Boolean))) +
+                  1
+                }
+              />
+              {sortedManagers.map((manager, index) => (
+                <Line
+                  key={manager}
+                  type="monotone"
+                  dataKey={manager}
+                  stroke={COLORS[index % COLORS.length]}
+                  strokeWidth={4}
+                  dot={false}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  name={manager}
+                  isAnimationActive={false}
+                  opacity={hoveringDataKey === manager || hoveringDataKey === undefined ? 1 : 0.25}
+                />
+              ))}
+              <Legend
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="left"
+                wrapperStyle={{
+                  color: "#9CA3AF",
+                }}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              />
+            </LineChart>{" "}
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
