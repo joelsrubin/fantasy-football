@@ -22,7 +22,7 @@ export function ManagersCard({ manager }: { manager: ManagerWithTeams }) {
             <FileQuestion className="h-6 w-6 text-zinc-400" />
           </div>
         )}
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="truncate font-semibold text-white transition-colors group-hover:text-violet-400">
             {manager.nickname}
           </h3>
