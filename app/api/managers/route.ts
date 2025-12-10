@@ -12,7 +12,7 @@ async function getAllManagersWithTeams() {
 export async function GET() {
   try {
     const managersWithTeams = await getAllManagersWithTeams();
-    console.log({ managersWithTeams });
+
     if (!managersWithTeams) {
       return NextResponse.json({ error: "No managers found" }, { status: 404 });
     }

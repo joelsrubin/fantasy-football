@@ -81,6 +81,8 @@ export function ManagersTab() {
         {managers.map((manager) => (
           <ManagersCard manager={manager} key={manager.id} />
         ))}
+        {/* little empty div to handle the odd number of managers */}
+        <div />
       </div>
     </>
   );

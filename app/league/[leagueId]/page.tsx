@@ -148,8 +148,6 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
                 <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-400">
                   {league.season} Season
                 </span>
-                <span>{league.numTeams} Teams</span>
-                <span>•</span>
                 <span>Week {league.currentWeek}</span>
               </div>
             </div>

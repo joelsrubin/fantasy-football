@@ -33,7 +33,7 @@ export function BumpChart({ leagueId }: BumpChartProps) {
     return (
       <div className="rounded-lg p-6 shadow">
         <h3 className="text-lg font-semibold mb-4">Manager Rankings Throughout Season</h3>
-        <div className="h-[400px] bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+        <div className="h-[400px] bg-gray-100 dark:bg-gray-700/10 rounded animate-pulse" />
       </div>
     );
   }
@@ -123,10 +123,7 @@ export function BumpChart({ leagueId }: BumpChartProps) {
   return (
     <div className="border border-zinc-700 bg-zinc-800/50 text-zinc-400 rounded-lg p-6 shadow">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold mb-2">Manager Rankings Throughout Season</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Lower numbers indicate better rankings. Week {weeks[0] || 1} to Week {latestWeek}
-        </p>
+        <h3 className="text-lg font-semibold mb-2">Season Power Rankings</h3>
       </div>
       <div className="overflow-x-auto">
         <div className="h-[400px] min-w-[600px]">
@@ -185,7 +182,7 @@ export function BumpChart({ leagueId }: BumpChartProps) {
                   dot={false}
                   activeDot={false}
                   name={manager}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                   opacity={hoveringDataKey === manager || hoveringDataKey === undefined ? 1 : 0.25}
                 />
               ))}
