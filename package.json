@@ -14,6 +14,7 @@
     "setup-yahoo": "tsx scripts/setup-yahoo.ts",
     "debug-yahoo": "tsx scripts/debug-yahoo.ts",
     "debug-standings": "tsx scripts/debug-standings.ts",
+    "get-current-week": "tsx scripts/get-current-week.ts",
     "seed-db": "tsx scripts/seed-db.ts",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
@@ -33,6 +34,7 @@
     "nuqs": "^2.8.2",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "recharts": "^3.5.1",
     "redis": "^5.10.0",
     "tailwind-merge": "^3.4.0"
   },

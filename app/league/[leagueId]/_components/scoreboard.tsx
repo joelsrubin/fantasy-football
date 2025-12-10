@@ -55,7 +55,7 @@ export function Scoreboard({
           <button
             type="button"
             onClick={() => setSelectedWeek(Math.min(league.endWeek ?? 17, selectedWeek + 1))}
-            disabled={selectedWeek >= (league.endWeek ?? 17)}
+            // disabled={isCurrentWeek && isNow}
             className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
           >
             <svg

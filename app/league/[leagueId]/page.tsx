@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { use, useEffect } from "react";
-
+import { BumpChart } from "@/app/_components/bump-chart";
 import { useLeague, useScoreboard, useStandings } from "@/lib/hooks/use-fantasy-data";
 import { Scoreboard } from "./_components/scoreboard";
 import { StandingsTable } from "./_components/standings-table";
 
-const tabs = ["standings", "scoreboard"] as const;
+const tabs = ["standings", "scoreboard", "rankings"] as const;
 
 export default function LeaguePage({ params }: { params: Promise<{ leagueId: string }> }) {
   const { leagueId } = use(params);
@@ -193,12 +193,23 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
         >
           Scoreboard
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("rankings")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+            activeTab === "rankings"
+              ? "bg-violet-500 text-white"
+              : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+          }`}
+        >
+          Rankings
+        </button>
       </div>
 
       {/* Content */}
       {activeTab === "standings" ? (
         <StandingsTable standings={standings ?? []} leagueId={leagueId} />
-      ) : (
+      ) : activeTab === "scoreboard" ? (
         <Scoreboard
           matchups={matchups ?? []}
           selectedWeek={effectiveWeek ?? 1}
@@ -208,6 +219,8 @@ export default function LeaguePage({ params }: { params: Promise<{ leagueId: str
           isLoading={scoreboardFetching}
           winLossRecords={winLossRecords}
         />
+      ) : (
+        <BumpChart leagueId={league?.leagueKey || leagueId} />
       )}
     </div>
   );

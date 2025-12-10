@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // Managers - unique users identified by Yahoo guid
@@ -113,12 +114,39 @@ export const rankings = sqliteTable(
   (table) => [uniqueIndex("rankings_manager_idx").on(table.managerId)],
 );
 
+// Weekly Rankings - historical ranking data by week for bump charts
+export const weeklyRankings = sqliteTable(
+  "weekly_rankings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    leagueId: integer("league_id")
+      .notNull()
+      .references(() => leagues.id),
+    managerId: integer("manager_id")
+      .notNull()
+      .references(() => managers.id),
+    week: integer("week").notNull(),
+    rank: integer("rank").notNull(),
+    wins: integer("wins").notNull().default(0),
+    losses: integer("losses").notNull().default(0),
+    ties: integer("ties").notNull().default(0),
+    winPct: real("win_pct").notNull().default(0),
+    pointsFor: real("points_for").notNull().default(0),
+    pointsAgainst: real("points_against").notNull().default(0),
+    createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("weekly_rankings_unique_idx").on(table.leagueId, table.managerId, table.week),
+  ],
+);
+
 // Type exports for inserts
 export type InsertManager = typeof managers.$inferInsert;
 export type InsertLeague = typeof leagues.$inferInsert;
 export type InsertTeam = typeof teams.$inferInsert;
 export type InsertMatchup = typeof matchups.$inferInsert;
 export type InsertRanking = typeof rankings.$inferInsert;
+export type InsertWeeklyRanking = typeof weeklyRankings.$inferInsert;
 
 // Type exports for selects
 export type Manager = typeof managers.$inferSelect;
@@ -126,3 +154,4 @@ export type League = typeof leagues.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Matchup = typeof matchups.$inferSelect;
 export type Ranking = typeof rankings.$inferSelect;
+export type WeeklyRanking = typeof weeklyRankings.$inferSelect;
