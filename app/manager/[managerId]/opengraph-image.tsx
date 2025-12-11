@@ -317,7 +317,7 @@ export default async function Image({ params }: { params: Promise<{ managerId: s
               }}
             >
               <TrophyIcon />
-              <span style={{ fontSize: 24, fontWeight: 500 }}>{stats.championships}x Champion</span>
+              <span style={{ fontSize: 30, fontWeight: 500 }}>{stats.championships}x Champion</span>
             </div>
           )}
 
@@ -334,7 +334,7 @@ export default async function Image({ params }: { params: Promise<{ managerId: s
             }}
           >
             <CalendarIcon />
-            <span style={{ fontSize: 24, fontWeight: 500 }}>
+            <span style={{ fontSize: 30, fontWeight: 500 }}>
               {stats.seasonsPlayed} Season{stats.seasonsPlayed !== 1 ? "s" : ""}
             </span>
           </div>
@@ -352,7 +352,7 @@ export default async function Image({ params }: { params: Promise<{ managerId: s
             }}
           >
             <TargetIcon />
-            <span style={{ fontSize: 24, fontWeight: 500 }}>
+            <span style={{ fontSize: 30, fontWeight: 500 }}>
               {(stats.winPct * 100).toFixed(1)}% Win Rate
             </span>
           </div>
@@ -371,7 +371,7 @@ export default async function Image({ params }: { params: Promise<{ managerId: s
               }}
             >
               <AwardIcon />
-              <span style={{ fontSize: 24, fontWeight: 500 }}>
+              <span style={{ fontSize: 30, fontWeight: 500 }}>
                 {playoffAppearances} Playoff Appearances
               </span>
             </div>
