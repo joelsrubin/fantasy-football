@@ -483,6 +483,9 @@ async function main() {
         }
 
         // Insert or update team
+        // A team made the playoffs if they have a playoff seed
+        const isPlayoffTeam = team.playoffSeed !== undefined && team.playoffSeed > 0;
+
         const [insertedTeam] = await db
           .insert(schema.teams)
           .values({
@@ -501,6 +504,7 @@ async function main() {
             pointsAgainst: team.pointsAgainst,
             rank: team.rank,
             playoffSeed: team.playoffSeed,
+            isPlayoffTeam,
           })
           .onConflictDoUpdate({
             target: schema.teams.teamKey,
@@ -514,6 +518,7 @@ async function main() {
               pointsAgainst: team.pointsAgainst,
               rank: team.rank,
               playoffSeed: team.playoffSeed,
+              isPlayoffTeam,
             },
           })
           .returning();
@@ -614,7 +619,7 @@ async function main() {
 }
 
 async function computeRankings(db: ReturnType<typeof createDb>) {
-  // Get all managers with their aggregated stats
+  // Get basic stats from teams table
   const managerStats = await db
     .select({
       managerId: schema.managers.id,
@@ -625,16 +630,43 @@ async function computeRankings(db: ReturnType<typeof createDb>) {
       totalPointsAgainst: sql<number>`SUM(${schema.teams.pointsAgainst})`,
       seasonsPlayed: sql<number>`COUNT(DISTINCT ${schema.teams.leagueId})`,
       championships: sql<number>`SUM(CASE WHEN ${schema.teams.rank} = 1 THEN 1 ELSE 0 END)`,
-      playoffAppearances: sql<number>`SUM(CASE WHEN ${schema.teams.isPlayoffTeam} = 1 THEN 1 ELSE 0 END)`,
+      // Count playoff appearances from both isPlayoffTeam field AND playoffSeed
+      playoffAppearances: sql<number>`SUM(CASE WHEN ${schema.teams.isPlayoffTeam} = 1 OR ${schema.teams.playoffSeed} > 0 THEN 1 ELSE 0 END)`,
     })
     .from(schema.managers)
     .innerJoin(schema.teams, eq(schema.teams.managerId, schema.managers.id))
     .groupBy(schema.managers.id);
 
+  // Also count playoff appearances from matchup data (most reliable source)
+  // This counts distinct league/team combinations that participated in playoff matchups
+  const playoffAppearancesFromMatchups = await db
+    .select({
+      managerId: schema.teams.managerId,
+      playoffAppearances: sql<number>`COUNT(DISTINCT ${schema.teams.leagueId})`,
+    })
+    .from(schema.matchups)
+    .innerJoin(
+      schema.teams,
+      sql`(${schema.teams.id} = ${schema.matchups.team1Id} OR ${schema.teams.id} = ${schema.matchups.team2Id})`,
+    )
+    .where(eq(schema.matchups.isPlayoff, true))
+    .groupBy(schema.teams.managerId);
+
+  // Create a map for quick lookup
+  const playoffAppearancesMap = new Map<number, number>();
+  for (const row of playoffAppearancesFromMatchups) {
+    playoffAppearancesMap.set(row.managerId, row.playoffAppearances);
+  }
+
   for (const stat of managerStats) {
     const totalGames = stat.totalWins + stat.totalLosses + stat.totalTies;
     const winPct = totalGames > 0 ? stat.totalWins / totalGames : 0;
     const pointDiff = stat.totalPointsFor - stat.totalPointsAgainst;
+
+    // Use the higher value between the two sources for playoff appearances
+    const playoffAppearancesFromTeams = stat.playoffAppearances || 0;
+    const playoffAppearancesFromGames = playoffAppearancesMap.get(stat.managerId) || 0;
+    const playoffAppearances = Math.max(playoffAppearancesFromTeams, playoffAppearancesFromGames);
 
     await db
       .insert(schema.rankings)
@@ -649,7 +681,7 @@ async function computeRankings(db: ReturnType<typeof createDb>) {
         pointDiff,
         seasonsPlayed: stat.seasonsPlayed,
         championships: stat.championships,
-        playoffAppearances: stat.playoffAppearances,
+        playoffAppearances,
         updatedAt: new Date().toISOString(),
       })
       .onConflictDoUpdate({
@@ -664,7 +696,7 @@ async function computeRankings(db: ReturnType<typeof createDb>) {
           pointDiff,
           seasonsPlayed: stat.seasonsPlayed,
           championships: stat.championships,
-          playoffAppearances: stat.playoffAppearances,
+          playoffAppearances,
           updatedAt: new Date().toISOString(),
         },
       });

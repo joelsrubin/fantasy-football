@@ -6,9 +6,9 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { type RankingEntry, useRankings } from "@/lib/hooks/use-fantasy-data";
-import { StatsTab } from "./stats-tab";
 
 export function RankingsTab() {
   const { data: rankings, isLoading, error } = useRankings();
@@ -23,7 +23,9 @@ export function RankingsTab() {
           const entry = row.original;
           return (
             <div className="min-w-0">
-              <div className="truncate font-semibold text-zinc-300">{entry.name}</div>
+              <Link href={`/manager/${entry.guid}`} className="cursor-pointer">
+                <div className="truncate font-semibold text-zinc-300">{entry.name}</div>
+              </Link>
               {entry.name !== entry.nickname && (
                 <div className="truncate text-xs text-zinc-500">{entry.nickname}</div>
               )}
@@ -232,7 +234,6 @@ export function RankingsTab() {
           </table>
         </div>
       </div>
-      <StatsTab />
     </div>
   );
 }

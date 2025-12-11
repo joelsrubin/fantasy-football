@@ -6,13 +6,14 @@ import { Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { LeaguesTab } from "./_components/leages-tab";
-import { ManagersTab } from "./_components/managers-tab";
+
 import { RankingsTab } from "./_components/rankings-tab";
+import { StatsTab } from "./_components/stats-tab";
 
 const tabs = [
   { label: "leagues", Icon: ContactRound },
-  { label: "stats", Icon: Sparkles },
   { label: "managers", Icon: UsersRound },
+  { label: "stats", Icon: Sparkles },
 ] as const;
 
 export default function Home() {
@@ -63,11 +64,11 @@ function HomeContent() {
           <LeaguesTab />
         </TabsContent>
         <TabsContent value="stats">
-          <RankingsTab />
+          <StatsTab />
         </TabsContent>
 
         <TabsContent value="managers">
-          <ManagersTab />
+          <RankingsTab />
         </TabsContent>
       </Tabs>
     </div>
