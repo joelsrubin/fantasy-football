@@ -254,7 +254,7 @@ export default async function ManagerPage({ params }: { params: Promise<{ manage
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-400">
                 <Calendar className="h-3.5 w-3.5" />
-                {stats.seasonsPlayed} Seasons
+                {stats.seasonsPlayed} Season{stats.seasonsPlayed !== 1 ? "s" : ""}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-400">
                 <Target className="h-3.5 w-3.5" />

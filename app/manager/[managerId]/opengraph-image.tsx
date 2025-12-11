@@ -334,7 +334,9 @@ export default async function Image({ params }: { params: Promise<{ managerId: s
             }}
           >
             <CalendarIcon />
-            <span style={{ fontSize: 24, fontWeight: 500 }}>{stats.seasonsPlayed} Seasons</span>
+            <span style={{ fontSize: 24, fontWeight: 500 }}>
+              {stats.seasonsPlayed} Season{stats.seasonsPlayed !== 1 ? "s" : ""}
+            </span>
           </div>
 
           {/* Win Rate Badge */}
