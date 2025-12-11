@@ -177,6 +177,7 @@ export default async function ManagerPage({ params }: { params: Promise<{ manage
   const stats = await getManagerStats(selectedManager.id);
   const teamsData = await getManagerTeams(selectedManager.id);
   const NOT_FOUND_IMAGE_URL = "https://s.yimg.com/ag/images/default_user_profile_pic_64sq.jpg";
+  const playoffAppearances = teamsData.filter((t) => t.team?.rank && t.team.rank <= 6).length;
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
@@ -228,10 +229,10 @@ export default async function ManagerPage({ params }: { params: Promise<{ manage
                 <Target className="h-3.5 w-3.5" />
                 {(stats.winPct * 100).toFixed(1)}% Win Rate
               </span>
-              {stats.playoffAppearances > 0 && (
+              {playoffAppearances > 0 && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/20 px-3 py-1 text-sm text-blue-400">
                   <Award className="h-3.5 w-3.5" />
-                  {stats.playoffAppearances} Playoff Appearances
+                  {playoffAppearances} Playoff Appearances
                 </span>
               )}
             </div>
@@ -351,7 +352,7 @@ export default async function ManagerPage({ params }: { params: Promise<{ manage
               value={stats.championships}
               highlight={stats.championships > 0 ? "gold" : undefined}
             />
-            <StatsRow label="Playoff Appearances" value={stats.playoffAppearances} />
+            <StatsRow label="Playoff Appearances" value={playoffAppearances} />
             <StatsRow
               label="Playoff Record"
               value={`${stats.playoffWins}-${stats.playoffLosses}`}
@@ -368,7 +369,7 @@ export default async function ManagerPage({ params }: { params: Promise<{ manage
               label="Playoff Appearance Rate"
               value={
                 stats.seasonsPlayed > 0
-                  ? `${((stats.playoffAppearances / stats.seasonsPlayed) * 100).toFixed(0)}%`
+                  ? `${((playoffAppearances / stats.seasonsPlayed) * 100).toFixed(0)}%`
                   : "N/A"
               }
             />
