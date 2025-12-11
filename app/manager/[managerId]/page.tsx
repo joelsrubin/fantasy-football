@@ -17,6 +17,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/db/db";
 import { leagues, managers, matchups, rankings, teams } from "@/db/schema";
+import { StatCard } from "./_components/stats-card";
+import { StatsRow } from "./_components/stats-row";
 
 export async function generateMetadata({
   params,
@@ -446,11 +448,15 @@ export default async function ManagerPage({ params }: { params: Promise<{ manage
                     return (
                       <tr key={team.id} className="transition-colors hover:bg-zinc-800/30">
                         <td className="px-6 py-4">
-                          <span className="font-semibold text-white">{league.season}</span>
+                          <span className={`${isChampion ? "text-amber-400" : "text-zinc-300"}`}>
+                            {league.season}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-zinc-300">{team.name}</span>
+                            <span className={`${isChampion ? "text-amber-400" : "text-zinc-300"}`}>
+                              {team.name}
+                            </span>
                             {isChampion && <Trophy className="h-4 w-4 text-amber-400" />}
                           </div>
                         </td>
@@ -505,75 +511,6 @@ export default async function ManagerPage({ params }: { params: Promise<{ manage
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  color,
-  highlight = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  color: "emerald" | "red" | "amber" | "blue" | "orange" | "violet";
-  highlight?: boolean;
-}) {
-  const bgColors = {
-    emerald: "from-emerald-500/10 to-emerald-500/5",
-    red: "from-red-500/10 to-red-500/5",
-    amber: "from-amber-500/10 to-amber-500/5",
-    blue: "from-blue-500/10 to-blue-500/5",
-    orange: "from-orange-500/10 to-orange-500/5",
-    violet: "from-violet-500/10 to-violet-500/5",
-  };
-
-  const borderColors = {
-    emerald: "border-emerald-500/30",
-    red: "border-red-500/30",
-    amber: "border-amber-500/30",
-    blue: "border-blue-500/30",
-    orange: "border-orange-500/30",
-    violet: "border-violet-500/30",
-  };
-
-  return (
-    <div
-      className={`rounded-xl border bg-linear-to-br p-4 ${bgColors[color]} ${highlight ? borderColors[color] : "border-zinc-800"}`}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        {icon}
-        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{label}</span>
-      </div>
-      <div className="text-2xl font-bold text-white">{value}</div>
-    </div>
-  );
-}
-
-function StatsRow({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string | number;
-  highlight?: "positive" | "negative" | "gold";
-}) {
-  const highlightColors = {
-    positive: "text-emerald-400",
-    negative: "text-red-400",
-    gold: "text-amber-400 font-bold",
-  };
-
-  return (
-    <div className="flex items-center justify-between px-6 py-3">
-      <span className="text-zinc-400">{label}</span>
-      <span className={`font-semibold ${highlight ? highlightColors[highlight] : "text-white"}`}>
-        {value}
-      </span>
     </div>
   );
 }
