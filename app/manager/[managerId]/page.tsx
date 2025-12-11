@@ -13,9 +13,16 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/db/db";
 import { leagues, managers, matchups, rankings, teams } from "@/db/schema";
+
+export const metadata: Metadata = {
+  title: "Manager Profile | BBSFFL",
+  description:
+    "View manager career statistics, championship history, season-by-season performance, and playoff records.",
+};
 
 interface ManagerStats {
   totalWins: number;
