@@ -13,8 +13,8 @@ const NOT_FOUND_IMAGE_URL = "https://s.yimg.com/ag/images/default_user_profile_p
 // SVG icons as components (Satori doesn't support importing Lucide directly)
 const TrophyIcon = () => (
   <svg
-    width="16"
-    height="16"
+    width="20"
+    height="20"
     viewBox="0 0 24 24"
     fill="none"
     stroke="#fbbf24"
@@ -34,8 +34,8 @@ const TrophyIcon = () => (
 
 const CalendarIcon = () => (
   <svg
-    width="14"
-    height="14"
+    width="20"
+    height="20"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -54,8 +54,8 @@ const CalendarIcon = () => (
 const TargetIcon = () => (
   <svg
     aria-hidden="true"
-    width="14"
-    height="14"
+    width="20"
+    height="20"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -71,8 +71,8 @@ const TargetIcon = () => (
 
 const AwardIcon = () => (
   <svg
-    width="14"
-    height="14"
+    width="20"
+    height="20"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -282,7 +282,7 @@ export default async function Image({ params }: { params: Promise<{ managerId: s
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <span
                 style={{
-                  fontSize: 56,
+                  fontSize: 72,
                   fontWeight: 700,
                   color: "#fff",
                   lineHeight: 1.1,
@@ -290,88 +290,90 @@ export default async function Image({ params }: { params: Promise<{ managerId: s
               >
                 {manager.nickname}
               </span>
-              {stats.championships > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    backgroundColor: "rgba(245, 158, 11, 0.2)",
-                    borderRadius: 9999,
-                    padding: "8px 16px",
-                  }}
-                >
-                  <TrophyIcon />
-                  <span
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 600,
-                      color: "#fbbf24",
-                    }}
-                  >
-                    {stats.championships}x Champion
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Stat Badges */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 20 }}>
-              {/* Seasons Badge */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  backgroundColor: "rgba(139, 92, 246, 0.2)",
-                  borderRadius: 9999,
-                  padding: "8px 16px",
-                  color: "#a78bfa",
-                }}
-              >
-                <CalendarIcon />
-                <span style={{ fontSize: 16, fontWeight: 500 }}>{stats.seasonsPlayed} Seasons</span>
-              </div>
-
-              {/* Win Rate Badge */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  backgroundColor: "rgba(16, 185, 129, 0.2)",
-                  borderRadius: 9999,
-                  padding: "8px 16px",
-                  color: "#34d399",
-                }}
-              >
-                <TargetIcon />
-                <span style={{ fontSize: 16, fontWeight: 500 }}>
-                  {(stats.winPct * 100).toFixed(1)}% Win Rate
-                </span>
-              </div>
-
-              {/* Playoff Appearances Badge */}
-              {playoffAppearances > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    backgroundColor: "rgba(59, 130, 246, 0.2)",
-                    borderRadius: 9999,
-                    padding: "8px 16px",
-                    color: "#60a5fa",
-                  }}
-                >
-                  <AwardIcon />
-                  <span style={{ fontSize: 16, fontWeight: 500 }}>
-                    {playoffAppearances} Playoff Appearances
-                  </span>
-                </div>
-              )}
             </div>
           </div>
+        </div>
+        {/* Stat Badges */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 12,
+            marginTop: 20,
+          }}
+        >
+          {/* Championship Badge */}
+          {stats.championships > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                backgroundColor: "rgba(245, 158, 11, 0.2)",
+                borderRadius: 9999,
+                padding: "8px 16px",
+                color: "#fbbf24",
+              }}
+            >
+              <TrophyIcon />
+              <span style={{ fontSize: 24, fontWeight: 500 }}>{stats.championships}x Champion</span>
+            </div>
+          )}
+
+          {/* Seasons Badge */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: "rgba(139, 92, 246, 0.2)",
+              borderRadius: 9999,
+              padding: "8px 16px",
+              color: "#a78bfa",
+            }}
+          >
+            <CalendarIcon />
+            <span style={{ fontSize: 24, fontWeight: 500 }}>{stats.seasonsPlayed} Seasons</span>
+          </div>
+
+          {/* Win Rate Badge */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: "rgba(16, 185, 129, 0.2)",
+              borderRadius: 9999,
+              padding: "8px 16px",
+              color: "#34d399",
+            }}
+          >
+            <TargetIcon />
+            <span style={{ fontSize: 24, fontWeight: 500 }}>
+              {(stats.winPct * 100).toFixed(1)}% Win Rate
+            </span>
+          </div>
+
+          {/* Playoff Appearances Badge */}
+          {playoffAppearances > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                backgroundColor: "rgba(59, 130, 246, 0.2)",
+                borderRadius: 9999,
+                padding: "8px 16px",
+                color: "#60a5fa",
+              }}
+            >
+              <AwardIcon />
+              <span style={{ fontSize: 24, fontWeight: 500 }}>
+                {playoffAppearances} Playoff Appearances
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
