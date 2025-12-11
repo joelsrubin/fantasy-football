@@ -9,6 +9,7 @@ async function getAllManagersWithTeams() {
     },
   });
 }
+
 export async function GET() {
   try {
     const managersWithTeams = await getAllManagersWithTeams();

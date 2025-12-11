@@ -176,7 +176,7 @@ async function getManagerTeams(managerId: number) {
     .innerJoin(leagues, eq(teams.leagueId, leagues.id))
     .where(eq(teams.managerId, managerId));
 }
-
+export const revalidate = 60;
 export default async function ManagerPage({ params }: { params: Promise<{ managerId: string }> }) {
   const awaitedParams = await params;
   const guid = awaitedParams.managerId;

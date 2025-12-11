@@ -56,7 +56,9 @@ export interface StandingEntry {
 }
 
 async function fetchStandings(leagueKey: string): Promise<StandingEntry[]> {
-  const response = await fetch(`/api/fantasy/league/${encodeURIComponent(leagueKey)}/standings`);
+  const response = await fetch(`/api/fantasy/league/${encodeURIComponent(leagueKey)}/standings`, {
+    next: { revalidate: 3600 },
+  });
   if (!response.ok) {
     const data = await response.json();
     throw new Error(data.error || "Failed to fetch standings");
@@ -89,7 +91,7 @@ export interface MatchupEntry {
 
 async function fetchScoreboard(leagueKey: string, week: number): Promise<MatchupEntry[]> {
   const url = `/api/fantasy/league/${encodeURIComponent(leagueKey)}/scoreboard?week=${week}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { next: { revalidate: 3600 } });
   if (!response.ok) {
     const data = await response.json();
     throw new Error(data.error || "Failed to fetch scoreboard");
@@ -106,7 +108,7 @@ async function fetchTeamRoster(
   const url = week
     ? `/api/fantasy/league/${encodeURIComponent(leagueKey)}/team/${teamId}?week=${week}`
     : `/api/fantasy/league/${encodeURIComponent(leagueKey)}/team/${teamId}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { next: { revalidate: 3600 } });
   if (!response.ok) {
     const data = await response.json();
     throw new Error(data.error || "Failed to fetch roster");
@@ -139,7 +141,7 @@ export type FunFact =
 export type FunFacts = FunFact[];
 
 async function fetchFunFacts(): Promise<FunFacts> {
-  const response = await fetch("/api/fun-facts");
+  const response = await fetch("/api/fun-facts", { next: { revalidate: 3600 } });
   if (!response.ok) {
     const data = await response.json();
     throw new Error(data.error || "Failed to fetch fun facts");
@@ -165,7 +167,7 @@ export interface RankingEntry {
 }
 
 async function fetchRankings(): Promise<RankingEntry[]> {
-  const response = await fetch("/api/rankings");
+  const response = await fetch("/api/rankings", { next: { revalidate: 3600 } });
   if (!response.ok) {
     throw new Error("Failed to fetch rankings");
   }
@@ -174,7 +176,7 @@ async function fetchRankings(): Promise<RankingEntry[]> {
 }
 
 async function fetchManagers(): Promise<ManagerWithTeams[]> {
-  const response = await fetch("/api/managers");
+  const response = await fetch("/api/managers", { next: { revalidate: 3600 } });
   if (!response.ok) {
     throw new Error("Failed to fetch managers");
   }
