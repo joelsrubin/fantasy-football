@@ -18,25 +18,35 @@ import Link from "next/link";
 import { db } from "@/db/db";
 import { leagues, managers, matchups, rankings, teams } from "@/db/schema";
 
-export const metadata: Metadata = {
-  title: "Manager Profile | BBSFFL",
-  description:
-    "View manager career statistics, championship history, season-by-season performance, and playoff records.",
-  openGraph: {
-    title: "Manager Profile | BBSFFL",
-    description:
-      "View manager career statistics, championship history, season-by-season performance, and playoff records.",
-    type: "website",
-    images: ["/og-icon.png"],
-  },
-  twitter: {
-    card: "summary",
-    title: "Manager Profile | BBSFFL",
-    description:
-      "View manager career statistics, championship history, season-by-season performance, and playoff records.",
-    images: ["/og-icon.png"],
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ managerId: string }>;
+}): Promise<Metadata> {
+  const { managerId } = await params;
+  const [manager] = await db.select().from(managers).where(eq(managers.guid, managerId));
+
+  const nickname = manager?.nickname ?? "Manager";
+  const title = `${nickname}'s Profile | BBSFFL`;
+  const description = `View ${nickname}'s career statistics, championship history, season-by-season performance, and playoff records.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: ["/og-icon.png"],
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+      images: ["/og-icon.png"],
+    },
+  };
+}
 
 interface ManagerStats {
   totalWins: number;
