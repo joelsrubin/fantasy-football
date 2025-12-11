@@ -22,6 +22,20 @@ export const metadata: Metadata = {
   title: "Manager Profile | BBSFFL",
   description:
     "View manager career statistics, championship history, season-by-season performance, and playoff records.",
+  openGraph: {
+    title: "Manager Profile | BBSFFL",
+    description:
+      "View manager career statistics, championship history, season-by-season performance, and playoff records.",
+    type: "website",
+    images: ["/og-icon.png"],
+  },
+  twitter: {
+    card: "summary",
+    title: "Manager Profile | BBSFFL",
+    description:
+      "View manager career statistics, championship history, season-by-season performance, and playoff records.",
+    images: ["/og-icon.png"],
+  },
 };
 
 interface ManagerStats {
