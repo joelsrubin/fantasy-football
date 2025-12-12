@@ -623,7 +623,7 @@ async function calculateWeeklyRankings(
 }
 
 async function computeRankings(db: ReturnType<typeof createDb>): Promise<number> {
-  // Get basic stats from teams table
+  // Get basic stats from teams table, joining with leagues to check isFinished for championships
   const managerStats = await db
     .select({
       managerId: schema.managers.id,
@@ -633,12 +633,14 @@ async function computeRankings(db: ReturnType<typeof createDb>): Promise<number>
       totalPointsFor: sql<number>`SUM(${schema.teams.pointsFor})`,
       totalPointsAgainst: sql<number>`SUM(${schema.teams.pointsAgainst})`,
       seasonsPlayed: sql<number>`COUNT(DISTINCT ${schema.teams.leagueId})`,
-      championships: sql<number>`SUM(CASE WHEN ${schema.teams.rank} = 1 THEN 1 ELSE 0 END)`,
+      // Only count championships when league is finished
+      championships: sql<number>`SUM(CASE WHEN ${schema.teams.rank} = 1 AND ${schema.leagues.isFinished} = 1 THEN 1 ELSE 0 END)`,
       // Count playoff appearances from both isPlayoffTeam field AND playoffSeed
       playoffAppearances: sql<number>`SUM(CASE WHEN ${schema.teams.isPlayoffTeam} = 1 OR ${schema.teams.playoffSeed} > 0 THEN 1 ELSE 0 END)`,
     })
     .from(schema.managers)
     .innerJoin(schema.teams, eq(schema.teams.managerId, schema.managers.id))
+    .innerJoin(schema.leagues, eq(schema.teams.leagueId, schema.leagues.id))
     .groupBy(schema.managers.id);
 
   // Also count playoff appearances from matchup data (most reliable source)
