@@ -12,9 +12,8 @@ config({ path: ".env.local" });
 
 const YAHOO_FANTASY_API_BASE = "https://fantasysports.yahooapis.com/fantasy/v2";
 
-async function getTokens() {
-  const accessToken = await getYahooAccessToken();
-  return { accessToken };
+async function getAccessToken() {
+  return getYahooAccessToken();
 }
 
 async function fetchYahooAPI<T>(accessToken: string, endpoint: string): Promise<T> {
@@ -257,17 +256,15 @@ async function fetchLeagueDetails(accessToken: string, leagueKey: string): Promi
 async function main() {
   console.log("\n🔍 Debug: Fetch League Details from Yahoo API\n");
 
-  const tokens = await getTokens();
-  console.log("✅ Tokens loaded from Redis");
-  console.log(`   Token expires: ${new Date(tokens.expiresAt).toLocaleString()}`);
-  console.log(`   Token expired: ${Date.now() > tokens.expiresAt ? "YES ⚠️" : "NO ✓"}\n`);
+  const accessToken = await getAccessToken();
+  console.log("✅ Access token loaded from Turso\n");
 
   // Check if a league key was provided as argument
   let leagueKey = process.argv[2];
 
   if (!leagueKey) {
     // List leagues and use the most recent one
-    const latestLeague = await listUserLeagues(tokens.accessToken);
+    const latestLeague = await listUserLeagues(accessToken);
     if (latestLeague) {
       console.log(`💡 Using most recent league: ${latestLeague}`);
       console.log(
@@ -280,7 +277,7 @@ async function main() {
     }
   }
 
-  await fetchLeagueDetails(tokens.accessToken, leagueKey);
+  await fetchLeagueDetails(accessToken, leagueKey);
 }
 
 main().catch((err) => {
