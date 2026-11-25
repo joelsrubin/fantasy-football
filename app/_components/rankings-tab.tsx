@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { type RankingEntry, useRankings } from "@/lib/hooks/use-fantasy-data";
+import { H2HMatrix } from "./h2h-matrix";
 
 export function RankingsTab() {
   const { data: rankings, isLoading, error } = useRankings();
@@ -234,6 +235,7 @@ export function RankingsTab() {
           </table>
         </div>
       </div>
+      <H2HMatrix />
     </div>
   );
 }

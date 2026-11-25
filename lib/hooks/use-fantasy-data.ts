@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { League, ManagerWithTeams } from "@/db/schema";
+import type { H2HMatrix } from "@/lib/h2h";
 import type { YahooRosterPlayer } from "@/lib/yahoo-fantasy";
 
 interface SeasonData {
@@ -166,6 +167,15 @@ export interface RankingEntry {
   seasons: string[];
 }
 
+async function fetchH2H(): Promise<H2HMatrix> {
+  const response = await fetch("/api/h2h", { next: { revalidate: 3600 } });
+  if (!response.ok) {
+    throw new Error("Failed to fetch head-to-head");
+  }
+  const data = await response.json();
+  return data.matrix;
+}
+
 async function fetchRankings(): Promise<RankingEntry[]> {
   const response = await fetch("/api/rankings", { next: { revalidate: 3600 } });
   if (!response.ok) {
@@ -236,6 +246,14 @@ export function useRankings() {
     queryKey: ["rankings"],
     queryFn: fetchRankings,
     staleTime: 24 * 60 * 60 * 1000, // 24 hours - this data only changes when we run aggregate script
+  });
+}
+
+export function useH2H() {
+  return useQuery({
+    queryKey: ["h2h"],
+    queryFn: fetchH2H,
+    staleTime: 24 * 60 * 60 * 1000,
   });
 }
 

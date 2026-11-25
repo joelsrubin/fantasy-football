@@ -21,7 +21,7 @@
     "get-current-week": "tsx scripts/get-current-week.ts",
     "seed-db": "tsx scripts/seed-db.ts",
     "fix-rankings": "tsx scripts/fix-rankings.ts",
-    "test": "tsx --test lib/manager-identity.test.ts",
+    "test": "tsx --test lib/manager-identity.test.ts lib/h2h.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "db:migrate": "drizzle-kit migrate"
