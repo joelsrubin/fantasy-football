@@ -34,10 +34,12 @@ export async function GET(
         manager: schema.managers,
       })
       .from(schema.teams)
-      .innerJoin(schema.managers, eq(schema.teams.managerId, schema.managers.id))
+      .innerJoin(
+        schema.managers,
+        eq(schema.teams.managerId, schema.managers.id),
+      )
       .where(eq(schema.teams.leagueId, league.id))
       .orderBy(asc(schema.teams.rank));
-
     // Format standings response
     const standings = teamsWithManagers.map(({ team, manager }) => ({
       teamKey: team.teamKey,
@@ -77,7 +79,10 @@ export async function GET(
   } catch (error) {
     console.error("Error fetching standings:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch standings" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to fetch standings",
+      },
       { status: 500 },
     );
   }

@@ -10,6 +10,7 @@ import { createClient } from "@libsql/client";
 import { config } from "dotenv";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
+import { isUsableYahooGuid, resolveManagerGuid } from "@/lib/manager-identity";
 import { getYahooAccessToken } from "@/lib/yahoo-auth";
 import * as schema from "../db/schema";
 
@@ -77,6 +78,23 @@ interface TeamInfo {
   pointsAgainst: number;
   rank: number;
   playoffSeed?: number;
+}
+
+function flattenYahooManager(manager: unknown): Record<string, unknown> | null {
+  if (!manager) return null;
+  if (Array.isArray(manager)) {
+    const flat: Record<string, unknown> = {};
+    for (const item of manager) {
+      if (typeof item === "object" && item !== null) {
+        Object.assign(flat, item);
+      }
+    }
+    return Object.keys(flat).length > 0 ? flat : null;
+  }
+  if (typeof manager === "object") {
+    return manager as Record<string, unknown>;
+  }
+  return null;
 }
 
 interface MatchupInfo {
@@ -175,8 +193,8 @@ async function fetchLeagueStandings(accessToken: string, leagueKey: string): Pro
       }
 
       // Get manager info
-      const managersArray = flatTeam.managers as Array<{ manager: Record<string, unknown> }>;
-      const manager = managersArray?.[0]?.manager;
+      const managersArray = flatTeam.managers as Array<{ manager: unknown }>;
+      const manager = flattenYahooManager(managersArray?.[0]?.manager);
       if (!manager) continue;
 
       // Get standings info - it's in teamData[2]
@@ -326,6 +344,16 @@ async function main() {
   const db = createDb();
   console.log("✅ Connected to Turso database\n");
 
+  const existingManagers = await db.select().from(schema.managers);
+  const managerMap = new Map<string, number>(); // guid -> db id
+  const guidByNickname = new Map<string, string>();
+  for (const manager of existingManagers) {
+    managerMap.set(manager.guid, manager.id);
+    if (isUsableYahooGuid(manager.guid)) {
+      guidByNickname.set(manager.nickname, manager.guid);
+    }
+  }
+
   // Fetch all leagues
   console.log("📋 Fetching leagues from Yahoo...");
   const leagues = await fetchAllLeagues(accessToken);
@@ -334,7 +362,6 @@ async function main() {
   // Process each league
   let totalTeams = 0;
   let totalMatchups = 0;
-  const managerMap = new Map<string, number>(); // guid -> db id
   const teamKeyToId = new Map<string, number>(); // teamKey -> db id
 
   for (const league of leagues) {
@@ -373,14 +400,20 @@ async function main() {
       const teams = await fetchLeagueStandings(accessToken, league.leagueKey);
 
       for (const team of teams) {
-        // Ensure manager exists
-        let managerId = managerMap.get(team.managerGuid);
+        const managerGuid = resolveManagerGuid({
+          yahooGuid: team.managerGuid,
+          nickname: team.managerNickname,
+          teamKey: team.teamKey,
+          existingGuidByNickname: guidByNickname,
+        });
+
+        let managerId = managerMap.get(managerGuid);
 
         if (!managerId) {
           const [insertedManager] = await db
             .insert(schema.managers)
             .values({
-              guid: team.managerGuid,
+              guid: managerGuid,
               nickname: team.managerNickname,
               imageUrl: team.managerImageUrl,
             })
@@ -394,7 +427,10 @@ async function main() {
             .returning();
 
           managerId = insertedManager.id;
-          managerMap.set(team.managerGuid, managerId);
+          managerMap.set(managerGuid, managerId);
+          if (isUsableYahooGuid(managerGuid)) {
+            guidByNickname.set(team.managerNickname, managerGuid);
+          }
         }
 
         // Insert or update team
@@ -424,6 +460,7 @@ async function main() {
           .onConflictDoUpdate({
             target: schema.teams.teamKey,
             set: {
+              managerId,
               name: team.name,
               wins: team.wins,
               losses: team.losses,
