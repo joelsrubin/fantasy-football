@@ -1,9 +1,13 @@
 /**
- * Server-side Yahoo OAuth token management
- * Uses Redis for token storage in all environments
+ * Server-side Yahoo OAuth token management.
+ * Tokens are stored in Turso (app_settings table).
  */
 
-import { createClient } from "redis";
+import { createClient } from "@libsql/client";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/libsql";
+import { config } from "dotenv";
+import { appSettings } from "@/db/schema";
 
 export interface TokenData {
   accessToken: string;
@@ -13,46 +17,50 @@ export interface TokenData {
 
 const TOKEN_KEY = "yahoo-tokens";
 
-// In-memory cache for the current process
 let cachedToken: TokenData | null = null;
 
-// Redis client singleton
-let redisClient: ReturnType<typeof createClient> | null = null;
+function getDb() {
+  config({ path: ".env.local" });
 
-async function getRedisClient() {
-  if (!redisClient) {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      throw new Error("REDIS_URL environment variable is not set");
-    }
-    redisClient = createClient({ url: redisUrl });
-    await redisClient.connect();
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  if (!url || !authToken) {
+    throw new Error("TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are required");
   }
-  return redisClient;
+
+  const client = createClient({ url, authToken });
+  return drizzle(client, { schema: { appSettings } });
 }
 
 async function loadTokens(): Promise<TokenData | null> {
-  try {
-    const redis = await getRedisClient();
-    const data = await redis.get(TOKEN_KEY);
-    if (data) {
-      return JSON.parse(data) as TokenData;
-    }
-    return null;
-  } catch (error) {
-    console.error("Failed to load tokens from Redis:", error);
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, TOKEN_KEY))
+    .limit(1);
+
+  if (!row) {
     return null;
   }
+
+  return JSON.parse(row.value) as TokenData;
 }
 
 async function saveTokens(tokens: TokenData): Promise<void> {
-  try {
-    const redis = await getRedisClient();
-    await redis.set(TOKEN_KEY, JSON.stringify(tokens));
-  } catch (error) {
-    console.error("Failed to save tokens to Redis:", error);
-    throw error;
-  }
+  cachedToken = tokens;
+
+  const db = getDb();
+  const value = JSON.stringify(tokens);
+
+  await db
+    .insert(appSettings)
+    .values({ key: TOKEN_KEY, value })
+    .onConflictDoUpdate({
+      target: appSettings.key,
+      set: { value },
+    });
 }
 
 async function refreshAccessToken(currentRefreshToken: string): Promise<TokenData> {
@@ -88,46 +96,37 @@ async function refreshAccessToken(currentRefreshToken: string): Promise<TokenDat
 
   const tokens: TokenData = {
     accessToken: data.access_token,
-    // Yahoo returns a new refresh token - we must save it!
     refreshToken: data.refresh_token || currentRefreshToken,
     expiresAt: Date.now() + data.expires_in * 1000,
   };
 
-  // Persist the new tokens
   await saveTokens(tokens);
 
   return tokens;
 }
 
 export async function getYahooAccessToken(): Promise<string> {
-  // Try cache first
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60000) {
     return cachedToken.accessToken;
   }
 
-  // Try loading from Redis
   const storedTokens = await loadTokens();
 
   if (storedTokens) {
-    // Check if access token is still valid
-    if (Date.now() < storedTokens.expiresAt - 60000) {
+    if (storedTokens.accessToken && Date.now() < storedTokens.expiresAt - 60000) {
       cachedToken = storedTokens;
       return storedTokens.accessToken;
     }
 
-    // Access token expired, refresh it
     cachedToken = await refreshAccessToken(storedTokens.refreshToken);
     return cachedToken.accessToken;
   }
 
   throw new Error(
-    "No Yahoo tokens found in Redis. Run 'pnpm run setup-yahoo' to authenticate with Yahoo.",
+    "No Yahoo tokens found. Run 'pnpm setup-yahoo' to authenticate with Yahoo.",
   );
 }
 
-/**
- * Initial token setup - exchange authorization code for tokens
- */
 export async function exchangeCodeForTokens(code: string, redirectUri: string): Promise<TokenData> {
   const clientId = process.env.YAHOO_CLIENT_ID;
   const clientSecret = process.env.YAHOO_CLIENT_SECRET;
@@ -169,10 +168,6 @@ export async function exchangeCodeForTokens(code: string, redirectUri: string): 
   return tokens;
 }
 
-/**
- * Manually set tokens (useful for initial setup)
- */
 export async function setTokens(tokens: TokenData): Promise<void> {
   await saveTokens(tokens);
-  cachedToken = tokens;
 }

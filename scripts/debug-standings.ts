@@ -4,29 +4,12 @@
  */
 
 import { config } from "dotenv";
-import { createClient } from "redis";
+import { getYahooAccessToken } from "@/lib/yahoo-auth";
 
 config({ path: ".env.local" });
 
 async function main() {
-  const REDIS_URL = process.env.REDIS_URL;
-  if (!REDIS_URL) {
-    console.error("❌ REDIS_URL not set in .env.local\n");
-    process.exit(1);
-  }
-
-  // Load tokens from Redis
-  const redis = createClient({ url: REDIS_URL });
-  await redis.connect();
-  const tokensData = await redis.get("yahoo-tokens");
-  await redis.disconnect();
-
-  if (!tokensData) {
-    console.error("❌ No tokens found in Redis. Run 'pnpm run setup-yahoo' first.\n");
-    process.exit(1);
-  }
-
-  const tokens = JSON.parse(tokensData);
+  const accessToken = await getYahooAccessToken();
 
   console.log("\n🔍 Fetching standings for 461.l.66782...\n");
 
@@ -34,7 +17,7 @@ async function main() {
     "https://fantasysports.yahooapis.com/fantasy/v2/league/461.l.66782/standings?format=json",
     {
       headers: {
-        Authorization: `Bearer ${tokens.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
     },

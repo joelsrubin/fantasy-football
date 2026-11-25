@@ -1,33 +1,23 @@
 /**
  * Yahoo OAuth Setup Script
  * Run with: pnpm run setup-yahoo
- *
- * This opens a browser for you to authorize the app,
- * then saves the tokens to Redis.
+ * Or pass the code directly: pnpm run setup-yahoo -- <code>
  */
 
 import { exec } from "node:child_process";
 import { createInterface } from "node:readline";
 import { config } from "dotenv";
-import { createClient } from "redis";
 
-// Load environment variables from .env.local
 config({ path: ".env.local" });
 
 const CLIENT_ID = process.env.YAHOO_CLIENT_ID;
 const CLIENT_SECRET = process.env.YAHOO_CLIENT_SECRET;
-const REDIS_URL = process.env.REDIS_URL;
-const REDIRECT_URI = "https://localhost:3000/callback";
+const REDIRECT_URI = process.env.YAHOO_REDIRECT_URI || "oob";
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error("\n❌ Missing environment variables!");
-  console.error("Please set YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET in your .env.local file\n");
-  process.exit(1);
-}
-
-if (!REDIS_URL) {
-  console.error("\n❌ Missing REDIS_URL!");
-  console.error("Please set REDIS_URL in your .env.local file\n");
+  console.error("Please set YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET in your .env.local file");
+  console.error("Run: pnpm verify-yahoo to diagnose\n");
   process.exit(1);
 }
 
@@ -37,81 +27,74 @@ authUrl.searchParams.set("redirect_uri", REDIRECT_URI);
 authUrl.searchParams.set("response_type", "code");
 authUrl.searchParams.set("scope", "fspt-r");
 
-console.log("\n🏈 Yahoo Fantasy Football OAuth Setup\n");
-console.log("Opening browser for authorization...\n");
-
-// Open the auth URL in the browser
-const openCommand =
-  process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
-
-exec(`${openCommand} "${authUrl.toString()}"`);
-
-console.log("After authorizing, you'll be redirected to a page that won't load.");
-console.log("That's expected! Copy the 'code' parameter from the URL.\n");
-console.log("The URL will look like:");
-console.log("  https://localhost:3000/callback?code=XXXXXX\n");
-console.log("Copy everything after 'code=' and paste it below.\n");
-
-const rl = createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-rl.question("Paste the code here: ", async (code) => {
-  rl.close();
-
-  const trimmedCode = code.trim();
-
-  if (!trimmedCode) {
-    console.error("\n❌ No code provided");
-    process.exit(1);
-  }
+async function exchangeAndSave(code: string) {
+  const { exchangeCodeForTokens } = await import("@/lib/yahoo-auth");
 
   console.log("\n⏳ Exchanging code for tokens...");
 
   try {
-    const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
-
-    const tokenResponse = await fetch("https://api.login.yahoo.com/oauth2/get_token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${credentials}`,
-      },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: trimmedCode,
-        redirect_uri: REDIRECT_URI,
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      throw new Error(`Token exchange failed: ${errorText}`);
-    }
-
-    const data = await tokenResponse.json();
-
-    const tokens = {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresAt: Date.now() + data.expires_in * 1000,
-    };
-
-    // Save to Redis
-    console.log("⏳ Saving tokens to Redis...");
-    const redis = createClient({ url: REDIS_URL });
-    await redis.connect();
-    await redis.set("yahoo-tokens", JSON.stringify(tokens));
-    await redis.disconnect();
-
+    await exchangeCodeForTokens(code, REDIRECT_URI);
     console.log("\n✅ Authorization successful!");
-    console.log("📁 Tokens saved to Redis");
-    console.log("\n🚀 You can now run: pnpm dev\n");
-
+    console.log("📁 Tokens saved to Turso");
+    console.log("\n🚀 You can now run: pnpm seed-db && pnpm dev\n");
     process.exit(0);
   } catch (err) {
-    console.error("\n❌ Error:", err instanceof Error ? err.message : err);
+    const message = err instanceof Error ? err.message : String(err);
+
+    console.error("\n❌ Error:", message);
+
+    if (message.includes("invalid_client") || message.includes("INVALID_CLIENT")) {
+      console.error("\n💡 Yahoo rejected the client credentials.");
+      console.error("   Create a new app at https://developer.yahoo.com/apps/");
+      console.error("   Update YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET in .env.local\n");
+    } else if (message.includes("INVALID_AUTHORIZATION_CODE")) {
+      console.error("\n💡 The code expired (they last ~60 seconds). Run setup-yahoo again");
+      console.error("   and paste the new code immediately.\n");
+    }
+
     process.exit(1);
   }
-});
+}
+
+const codeFromArgs = process.argv.slice(2).find((arg) => arg !== "--")?.trim();
+
+if (codeFromArgs) {
+  void exchangeAndSave(codeFromArgs);
+} else {
+  console.log("\n🏈 Yahoo Fantasy Football OAuth Setup\n");
+  console.log(`Using redirect URI: ${REDIRECT_URI}`);
+  console.log("Opening browser for authorization...\n");
+  console.log(`Auth URL:\n${authUrl.toString()}\n`);
+
+  const openCommand =
+    process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+
+  exec(`${openCommand} "${authUrl.toString()}"`);
+
+  if (REDIRECT_URI === "oob") {
+    console.log("After authorizing, Yahoo will show a verification code on screen.");
+    console.log("Copy that code and paste it below.\n");
+  } else {
+    console.log("After authorizing, you'll be redirected to a page that won't load.");
+    console.log("That's expected! Copy the 'code' parameter from the URL.\n");
+    console.log("The URL will look like:");
+    console.log(`  ${REDIRECT_URI}?code=XXXXXX\n`);
+  }
+
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  rl.question("Paste the code here: ", (code) => {
+    rl.close();
+
+    const trimmedCode = code.trim();
+    if (!trimmedCode) {
+      console.error("\n❌ No code provided");
+      process.exit(1);
+    }
+
+    void exchangeAndSave(trimmedCode);
+  });
+}

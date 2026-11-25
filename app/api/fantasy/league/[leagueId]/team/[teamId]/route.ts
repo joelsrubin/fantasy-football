@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { CURRENT_NFL_GAME_ID } from "@/lib/nfl-season";
 import { getYahooAccessToken } from "@/lib/yahoo-auth";
 import { createYahooFantasyAPI } from "@/lib/yahoo-fantasy";
 
 const ONE_YEAR = 31536000;
-const CURRENT_GAME_ID = "461"; // 2025 season
 
 export async function GET(
   request: NextRequest,
@@ -19,9 +19,9 @@ export async function GET(
     const decodedLeagueId = decodeURIComponent(leagueId);
     const leagueKey = decodedLeagueId.includes(".l.")
       ? decodedLeagueId
-      : `461.l.${decodedLeagueId}`;
+      : `${CURRENT_NFL_GAME_ID}.l.${decodedLeagueId}`;
     const gameId = leagueKey.split(".")[0];
-    const isHistorical = gameId !== CURRENT_GAME_ID;
+    const isHistorical = gameId !== CURRENT_NFL_GAME_ID;
 
     const teamKey = `${leagueKey}.t.${teamId}`;
 

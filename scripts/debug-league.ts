@@ -6,31 +6,15 @@
  */
 
 import { config } from "dotenv";
-import { createClient } from "redis";
-import type { TokenData } from "@/lib/yahoo-auth";
+import { getYahooAccessToken } from "@/lib/yahoo-auth";
 
 config({ path: ".env.local" });
 
 const YAHOO_FANTASY_API_BASE = "https://fantasysports.yahooapis.com/fantasy/v2";
 
-async function getTokens(): Promise<TokenData> {
-  const REDIS_URL = process.env.REDIS_URL;
-  if (!REDIS_URL) {
-    console.error("❌ REDIS_URL not set in .env.local\n");
-    process.exit(1);
-  }
-
-  const redis = createClient({ url: REDIS_URL });
-  await redis.connect();
-  const data = await redis.get("yahoo-tokens");
-  await redis.quit();
-
-  if (!data) {
-    console.error("❌ No tokens found in Redis. Run 'pnpm run setup-yahoo' first.\n");
-    process.exit(1);
-  }
-
-  return JSON.parse(data);
+async function getTokens() {
+  const accessToken = await getYahooAccessToken();
+  return { accessToken };
 }
 
 async function fetchYahooAPI<T>(accessToken: string, endpoint: string): Promise<T> {

@@ -1,6 +1,12 @@
 import { relations, sql } from "drizzle-orm";
 import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+// App settings - key/value store (e.g. Yahoo OAuth tokens)
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
 // Managers - unique users identified by Yahoo guid
 export const managers = sqliteTable(
   "managers",

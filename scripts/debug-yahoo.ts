@@ -4,43 +4,23 @@
  */
 
 import { config } from "dotenv";
-import { createClient } from "redis";
-import type { TokenData } from "@/lib/yahoo-auth";
+import { getYahooAccessToken } from "@/lib/yahoo-auth";
 
 config({ path: ".env.local" });
 
 async function main() {
   console.log("\n🔍 Debugging Yahoo API Access\n");
 
-  const REDIS_URL = process.env.REDIS_URL;
-  if (!REDIS_URL) {
-    console.error("❌ REDIS_URL not set in .env.local\n");
-    process.exit(1);
-  }
-
-  // Load tokens from Redis
-  let tokens: TokenData | null = null;
+  let accessToken: string;
   try {
-    const redis = createClient({ url: REDIS_URL });
-    await redis.connect();
-    const data = await redis.get("yahoo-tokens");
-    await redis.disconnect();
-
-    if (!data) {
-      console.error("❌ No tokens found in Redis. Run 'pnpm run setup-yahoo' first.\n");
-      process.exit(1);
-    }
-
-    tokens = JSON.parse(data);
-    console.log("✅ Tokens found in Redis");
-    console.log(`   Access token expires: ${new Date(tokens?.expiresAt || 0).toLocaleString()}`);
-    console.log(`   Token expired: ${Date.now() > (tokens?.expiresAt || 0) ? "YES ⚠️" : "NO ✓"}\n`);
+    accessToken = await getYahooAccessToken();
+    console.log("✅ Tokens found in Turso\n");
   } catch (error) {
-    console.error("❌ Failed to load tokens from Redis:", error);
+    console.error("❌ Failed to load tokens:", error);
+    console.error("\nRun 'pnpm setup-yahoo' first.\n");
     process.exit(1);
   }
 
-  // Test API access - get user's games and leagues
   console.log("📡 Fetching your Yahoo Fantasy leagues...\n");
 
   try {
@@ -48,7 +28,7 @@ async function main() {
       "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_codes=nfl/leagues?format=json",
       {
         headers: {
-          Authorization: `Bearer ${tokens?.accessToken || ""}`,
+          Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
         },
       },
@@ -60,14 +40,13 @@ async function main() {
       console.error(errorText);
 
       if (response.status === 401) {
-        console.log("\n💡 Token may be expired. Try running 'pnpm run setup-yahoo' again.\n");
+        console.log("\n💡 Token may be expired. Try running 'pnpm setup-yahoo' again.\n");
       }
       process.exit(1);
     }
 
     const data = await response.json();
 
-    // Parse the response to find leagues
     const users = data.fantasy_content?.users;
     const user = users?.["0"]?.user;
 

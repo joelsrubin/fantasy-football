@@ -4,6 +4,7 @@
  */
 
 import { config } from "dotenv";
+import { CURRENT_NFL_SEASON } from "@/lib/nfl-season";
 import { getYahooAccessToken } from "@/lib/yahoo-auth";
 
 config({ path: ".env.local" });
@@ -67,7 +68,7 @@ async function main() {
       const leaguesCount = leagues?.count || 0;
 
       // Focus on the most recent season
-      if (!foundCurrentSeason && gameInfo.season === "2025") {
+      if (!foundCurrentSeason && gameInfo.season === CURRENT_NFL_SEASON) {
         foundCurrentSeason = true;
         console.log(`\n📅 ${gameInfo.season} Season`);
 
@@ -83,7 +84,7 @@ async function main() {
     }
 
     if (!foundCurrentSeason) {
-      console.log("No 2024 season leagues found. Checking all seasons...\n");
+      console.log(`No ${CURRENT_NFL_SEASON} season leagues found. Checking all seasons...\n`);
 
       for (let i = 0; i < gamesCount; i++) {
         const game = games[i.toString()]?.game;

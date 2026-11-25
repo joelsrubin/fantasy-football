@@ -10,97 +10,12 @@ import { createClient } from "@libsql/client";
 import { config } from "dotenv";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
+import { getYahooAccessToken } from "@/lib/yahoo-auth";
 import * as schema from "../db/schema";
 
 config({ path: ".env.local" });
 
 const YAHOO_API_BASE = "https://fantasysports.yahooapis.com/fantasy/v2";
-
-// Token management
-interface TokenData {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}
-
-let cachedToken: TokenData | null = null;
-
-async function getAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt - 60000) {
-    return cachedToken.accessToken;
-  }
-
-  // Try to load from Redis first
-  const redisUrl = process.env.REDIS_URL;
-  if (redisUrl) {
-    const { createClient: createRedisClient } = await import("redis");
-    const redis = createRedisClient({ url: redisUrl });
-    await redis.connect();
-
-    const tokenData = await redis.get("yahoo-tokens");
-    await redis.disconnect();
-
-    if (tokenData) {
-      const tokens: TokenData = JSON.parse(tokenData);
-      if (Date.now() < tokens.expiresAt - 60000) {
-        cachedToken = tokens;
-        return tokens.accessToken;
-      }
-      // Token expired, need to refresh
-      return refreshToken(tokens.refreshToken);
-    }
-  }
-
-  throw new Error("No Yahoo tokens found. Run 'pnpm setup-yahoo' first.");
-}
-
-async function refreshToken(refreshTokenValue: string): Promise<string> {
-  const clientId = process.env.YAHOO_CLIENT_ID;
-  const clientSecret = process.env.YAHOO_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing YAHOO_CLIENT_ID or YAHOO_CLIENT_SECRET");
-  }
-
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-  const response = await fetch("https://api.login.yahoo.com/oauth2/get_token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${credentials}`,
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refreshTokenValue,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to refresh token: ${await response.text()}`);
-  }
-
-  const data = await response.json();
-
-  const tokens: TokenData = {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token || refreshTokenValue,
-    expiresAt: Date.now() + data.expires_in * 1000,
-  };
-
-  // Save refreshed token back to Redis
-  const redisUrl = process.env.REDIS_URL;
-  if (redisUrl) {
-    const { createClient: createRedisClient } = await import("redis");
-    const redis = createRedisClient({ url: redisUrl });
-    await redis.connect();
-    await redis.set("yahoo-tokens", JSON.stringify(tokens), { EX: 60 * 60 * 24 * 30 });
-    await redis.disconnect();
-  }
-
-  cachedToken = tokens;
-  return tokens.accessToken;
-}
 
 async function yahooRequest<T>(accessToken: string, endpoint: string): Promise<T> {
   const response = await fetch(`${YAHOO_API_BASE}${endpoint}`, {
@@ -405,7 +320,7 @@ async function main() {
   console.log("=".repeat(50));
 
   // Initialize
-  let accessToken = await getAccessToken();
+  let accessToken = await getYahooAccessToken();
   console.log("✅ Loaded Yahoo access token\n");
 
   const db = createDb();
@@ -538,7 +453,7 @@ async function main() {
 
         for (let week = league.startWeek; week <= weeksToFetch; week++) {
           // Refresh token if needed (long running process)
-          accessToken = await getAccessToken();
+          accessToken = await getYahooAccessToken();
 
           const matchups = await fetchLeagueMatchups(accessToken, league.leagueKey, week);
 

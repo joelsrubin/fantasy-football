@@ -12,6 +12,7 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "setup-yahoo": "tsx scripts/setup-yahoo.ts",
+    "verify-yahoo": "tsx scripts/verify-yahoo.ts",
     "refresh-token": "tsx scripts/refresh-token.ts",
     "debug-yahoo": "tsx scripts/debug-yahoo.ts",
     "debug-league": "tsx scripts/debug-league.ts",
