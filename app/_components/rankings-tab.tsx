@@ -7,11 +7,57 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import Link from "next/link";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { type RankingEntry, useRankings } from "@/lib/hooks/use-fantasy-data";
 import { H2HMatrix } from "./h2h-matrix";
 
+const views = ["standings", "h2h"] as const;
+
+const subTabClass = "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors -mb-px";
+
 export function RankingsTab() {
+  const [view, setView] = useQueryState(
+    "view",
+    parseAsStringLiteral(views).withDefault("standings"),
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-center gap-2 border-b border-zinc-800">
+        <button
+          type="button"
+          onClick={() => {
+            void setView("standings");
+          }}
+          className={`${subTabClass} ${
+            view === "standings"
+              ? "border-violet-400 text-white"
+              : "border-transparent text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          Standings
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void setView("h2h");
+          }}
+          className={`${subTabClass} ${
+            view === "h2h"
+              ? "border-violet-400 text-white"
+              : "border-transparent text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          Head to Head
+        </button>
+      </div>
+      {view === "h2h" ? <H2HMatrix /> : <StandingsTable />}
+    </div>
+  );
+}
+
+function StandingsTable() {
   const { data: rankings, isLoading, error } = useRankings();
   const [sorting, setSorting] = useState<SortingState>([{ id: "winPct", desc: true }]);
 
@@ -151,91 +197,87 @@ export function RankingsTab() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Rankings Table */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
-        <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">All-Time Standings</h2>
-          <p className="text-xs text-zinc-500 mt-1">Click column headers to sort</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr
-                  key={headerGroup.id}
-                  className="border-b border-zinc-800 text-left text-xs uppercase tracking-wider text-zinc-500"
-                >
-                  {headerGroup.headers.map((header) => {
-                    const isHiddenOnMobile = ["pointsFor", "pointDiff", "seasonsPlayed"].includes(
-                      header.id,
-                    );
-                    return (
-                      <th
-                        key={header.id}
-                        className={`px-4 py-4 ${isHiddenOnMobile ? "hidden sm:table-cell" : ""} ${
-                          header.column.getCanSort()
-                            ? "cursor-pointer select-none hover:text-zinc-300"
-                            : ""
-                        }`}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        <div className="flex items-center gap-1">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {{
-                            asc: <SortAscIcon />,
-                            desc: <SortDescIcon />,
-                          }[header.column.getIsSorted() as string] ??
-                            (header.column.getCanSort() ? <SortIcon /> : null)}
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-zinc-800/50">
-              {table.getRowModel().rows.map((row, index) => (
-                <tr key={row.id} className="transition-colors hover:bg-zinc-800/30">
-                  {row.getVisibleCells().map((cell) => {
-                    const isHiddenOnMobile = ["pointsFor", "pointDiff", "seasonsPlayed"].includes(
-                      cell.column.id,
-                    );
-                    return (
-                      <td
-                        key={cell.id}
-                        className={`px-4 py-4 ${isHiddenOnMobile ? "hidden sm:table-cell" : ""}`}
-                      >
-                        {cell.column.id === "name" && (
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                                index === 0
-                                  ? "bg-amber-500/20 text-amber-400"
-                                  : index === 1
-                                    ? "bg-zinc-400/20 text-zinc-300"
-                                    : index === 2
-                                      ? "bg-orange-600/20 text-orange-400"
-                                      : "bg-zinc-800 text-zinc-500"
-                              }`}
-                            >
-                              {index + 1}
-                            </div>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </div>
-                        )}
-                        {cell.column.id !== "name" &&
-                          flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden">
+      <div className="border-b border-zinc-800 bg-zinc-800/30 px-6 py-4">
+        <h2 className="text-lg font-semibold text-white">All-Time Standings</h2>
+        <p className="text-xs text-zinc-500 mt-1">Click column headers to sort</p>
       </div>
-      <H2HMatrix />
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr
+                key={headerGroup.id}
+                className="border-b border-zinc-800 text-left text-xs uppercase tracking-wider text-zinc-500"
+              >
+                {headerGroup.headers.map((header) => {
+                  const isHiddenOnMobile = ["pointsFor", "pointDiff", "seasonsPlayed"].includes(
+                    header.id,
+                  );
+                  return (
+                    <th
+                      key={header.id}
+                      className={`px-4 py-4 ${isHiddenOnMobile ? "hidden sm:table-cell" : ""} ${
+                        header.column.getCanSort()
+                          ? "cursor-pointer select-none hover:text-zinc-300"
+                          : ""
+                      }`}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      <div className="flex items-center gap-1">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {{
+                          asc: <SortAscIcon />,
+                          desc: <SortDescIcon />,
+                        }[header.column.getIsSorted() as string] ??
+                          (header.column.getCanSort() ? <SortIcon /> : null)}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="divide-y divide-zinc-800/50">
+            {table.getRowModel().rows.map((row, index) => (
+              <tr key={row.id} className="transition-colors hover:bg-zinc-800/30">
+                {row.getVisibleCells().map((cell) => {
+                  const isHiddenOnMobile = ["pointsFor", "pointDiff", "seasonsPlayed"].includes(
+                    cell.column.id,
+                  );
+                  return (
+                    <td
+                      key={cell.id}
+                      className={`px-4 py-4 ${isHiddenOnMobile ? "hidden sm:table-cell" : ""}`}
+                    >
+                      {cell.column.id === "name" && (
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                              index === 0
+                                ? "bg-amber-500/20 text-amber-400"
+                                : index === 1
+                                  ? "bg-zinc-400/20 text-zinc-300"
+                                  : index === 2
+                                    ? "bg-orange-600/20 text-orange-400"
+                                    : "bg-zinc-800 text-zinc-500"
+                            }`}
+                          >
+                            {index + 1}
+                          </div>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
+                      )}
+                      {cell.column.id !== "name" &&
+                        flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
